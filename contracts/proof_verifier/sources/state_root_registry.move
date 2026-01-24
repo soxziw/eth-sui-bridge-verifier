@@ -78,4 +78,35 @@ module proof_verifier::state_root_registry {
         let rec = dof::borrow<u64, BlockStateRootOracle>(&oracle.id, block_number);
         rec.state_root
     }
+
+    #[test_only]
+    public fun new_for_testing(ctx: &mut TxContext): (AdminCap, StateRootOracle) {
+        let cap = AdminCap { id: object::new(ctx) };
+        let oracle = StateRootOracle {
+            id: object::new(ctx),
+            address: ctx.sender(),
+            name: b"StateRootOracle(test)".to_string(),
+            description: b"test oracle".to_string(),
+        };
+        (cap, oracle)
+    }
+
+
+    #[test_only]
+    public fun destroy_oracle_for_testing(oracle: StateRootOracle) {
+        let StateRootOracle {
+            id,
+            address: _,
+            name: _,
+            description: _,
+        } = oracle;
+
+        object::delete(id);
+    }
+
+    #[test_only]
+    public fun destroy_admin_for_testing(cap: AdminCap) {
+        let AdminCap { id } = cap;
+        object::delete(id);
+    }
 }

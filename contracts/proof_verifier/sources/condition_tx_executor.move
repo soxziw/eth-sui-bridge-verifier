@@ -88,7 +88,7 @@ module proof_verifier::condition_tx_executor {
         _: &AdminCap,
         oracle: &mut ConditionTxOracle,
         list_of_condition_accounts: vector<vector<u8>>,
-        list_of_condition_operators: vector<Operator>,
+        list_of_condition_operators: vector<u8>,
         list_of_condition_values: vector<u256>,
         actionTarget: address,
         actionValue: u256,
@@ -106,7 +106,15 @@ module proof_verifier::condition_tx_executor {
         while (i < length) {
             vector::push_back(&mut list_of_conditions, Condition {
                 account: list_of_condition_accounts[i],
-                operator: list_of_condition_operators[i],
+                operator: match (list_of_condition_operators[i]) {
+                    0 => Operator::GT,
+                    1 => Operator::GTE,
+                    2 => Operator::LT,
+                    3 => Operator::LTE,
+                    4 => Operator::EQ,
+                    5 => Operator::NEQ,
+                    _ => abort E_BAD_INPUT,
+                },
                 value: list_of_condition_values[i],
             });
             i = i + 1;
@@ -211,5 +219,39 @@ module proof_verifier::condition_tx_executor {
         } else {
             abort E_NO_COMMAND
         }
+    }
+
+    #[test_only]
+    public fun new_for_testing(ctx: &mut TxContext): (AdminCap, ConditionTxOracle) {
+        let cap = AdminCap { id: object::new(ctx) };
+        let oracle = ConditionTxOracle {
+            id: object::new(ctx),
+            address: ctx.sender(),
+            vault: balance::zero<SUI>(),
+            name: b"ConditionTxOracle(test)".to_string(),
+            description: b"test condition tx oracle".to_string(),
+        };
+        (cap, oracle)
+    }
+
+    #[test_only]
+    public fun destroy_oracle_for_testing(oracle: ConditionTxOracle, ctx: &mut TxContext) {
+        let ConditionTxOracle {
+            id,
+            address: _,
+            vault: mut vault,
+            name: _,
+            description: _,
+        } = oracle;
+        let amount = balance::value(&vault);
+        coin::burn_for_testing(coin::from_balance(balance::split(&mut vault, amount), ctx));
+        balance::destroy_zero(vault);
+        object::delete(id);
+    }
+
+    #[test_only]
+    public fun destroy_admin_for_testing(cap: AdminCap) {
+        let AdminCap { id } = cap;
+        object::delete(id);
     }
 }

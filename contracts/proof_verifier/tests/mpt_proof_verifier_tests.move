@@ -73,18 +73,17 @@ module proof_verifier::mpt_proof_verifier_tests {
             (tx_admin, tx_oracle) = condition_tx_executor::new_for_testing(ctx);
 
             // ---- submit state root ----
-            state_root_registry::submit_state_root(
+            let mut list_of_block_numbers = vector::empty<u64>();
+            vector::push_back(&mut list_of_block_numbers, zero_block_number);
+            vector::push_back(&mut list_of_block_numbers, non_zero_block_number);
+            let mut list_of_state_roots = vector::empty<vector<u8>>();
+            vector::push_back(&mut list_of_state_roots, zero_state_root);
+            vector::push_back(&mut list_of_state_roots, non_zero_state_root);
+            state_root_registry::submit_state_roots(
                 &state_admin,
                 &mut state_oracle,
-                zero_block_number,
-                zero_state_root,
-                ctx
-            );
-            state_root_registry::submit_state_root(
-                &state_admin,
-                &mut state_oracle,
-                non_zero_block_number,
-                non_zero_state_root,
+                list_of_block_numbers,
+                list_of_state_roots,
                 ctx
             );
 

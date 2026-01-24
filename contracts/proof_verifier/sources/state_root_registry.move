@@ -45,24 +45,50 @@ module proof_verifier::state_root_registry {
         transfer::public_transfer(cap, ctx.sender()); // Transfer the admin capability to the sender.
     }
 
-    public fun submit_state_root(
+    public fun submit_state_roots(
         _: &AdminCap, // The admin capability
         oracle: &mut StateRootOracle, // A mutable reference to the oracle object
-        block_number: u64, // The block number
-        state_root: vector<u8>, // The state root
+        list_of_block_numbers: vector<u64>, // The list of block numbers
+        list_of_state_roots: vector<vector<u8>>, // The list of state roots
         ctx: &mut TxContext // A mutable reference to the transaction context
     ) {
-        if (!dof::exists_with_type<u64, BlockStateRootOracle>(&oracle.id, block_number)) {
-            dof::add(&mut oracle.id, block_number, // Add a new dynamic object field to the oracle object with the block number as the key and a new block state root oracle object as the value.
-                BlockStateRootOracle {
-                    id: object::new(ctx), // Assign a unique ID to the block state root oracle object
-                    block_number, // Set the block number of the block state root oracle object
-                    state_root, // Set the state root of the block state root oracle object
-                }
-            );
-        } else {
-            let block_state_root_oracle_mut = dof::borrow_mut<u64, BlockStateRootOracle>(&mut oracle.id, block_number);
-            block_state_root_oracle_mut.state_root = state_root;
+        let mut i: u64 = 0;
+        while (i < vector::length(&list_of_block_numbers)) {
+            let block_number = list_of_block_numbers[i];
+            let state_root = list_of_state_roots[i];
+            if (!dof::exists_with_type<u64, BlockStateRootOracle>(&oracle.id, block_number)) {
+                dof::add(&mut oracle.id, block_number, // Add a new dynamic object field to the oracle object with the block number as the key and a new block state root oracle object as the value.
+                    BlockStateRootOracle {
+                        id: object::new(ctx), // Assign a unique ID to the block state root oracle object
+                        block_number, // Set the block number of the block state root oracle object
+                        state_root, // Set the state root of the block state root oracle object
+                    }
+                );
+            } else {
+                let block_state_root_oracle_mut = dof::borrow_mut<u64, BlockStateRootOracle>(&mut oracle.id, block_number);
+                block_state_root_oracle_mut.state_root = state_root;
+            };
+            i = i + 1;
+        }   
+    }
+
+    public fun delete_state_roots(
+        _: &AdminCap, // The admin capability
+        oracle: &mut StateRootOracle, // A mutable reference to the oracle object
+        list_of_block_numbers: vector<u64> // The list of block numbers
+    ) {
+        let mut i: u64 = 0;
+        while (i < vector::length(&list_of_block_numbers)) {
+            let block_number = list_of_block_numbers[i];
+            if (dof::exists_with_type<u64, BlockStateRootOracle>(&oracle.id, block_number)) {
+                let BlockStateRootOracle {
+                    id,
+                    block_number: _,
+                    state_root: _,
+                } = dof::remove(&mut oracle.id, block_number);
+                object::delete(id);
+            };
+            i = i + 1;
         }
     }
 

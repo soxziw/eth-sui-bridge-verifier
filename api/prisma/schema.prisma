@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model StateRoot {
+  id          Int    @id @default(autoincrement())
+  blockNumber String @unique
+  stateRoot   String
+}
+
+model Condition {
+  id       Int    @id @default(autoincrement())
+  account  String
+  operator String
+  value    String
+
+  conditionTxId Int
+  conditionTx   ConditionTx @relation(fields: [conditionTxId], references: [id])
+}
+
+model TxAction {
+  id        Int    @id @default(autoincrement())
+  recipient String
+  amount    String
+
+  conditionTxId Int         @unique
+  conditionTx   ConditionTx @relation(fields: [conditionTxId], references: [id])
+}
+
+model ConditionTx {
+  id         Int         @id @default(autoincrement())
+  objectId   String @unique
+  conditions Condition[]
+  action     TxAction?
+}
+
+model AccountProof {
+  id    Int    @id @default(autoincrement())
+  proof String
+
+  mptProofId Int
+  mptProof   MPTProof @relation(fields: [mptProofId], references: [id])
+}
+
+model MPTProof {
+  id                  Int            @id @default(autoincrement())
+  objectId            String         @unique
+  blockNumber         String
+  account             String
+  accountProof        AccountProof[]
+  expectedNonce       String
+  expectedBalance     String
+  expectedStorageRoot String
+  expectedCodeHash    String
+}
+
+/// Saves the latest cursor for a given key.
+model Cursor {
+  id       String @id
+  eventSeq String
+  txDigest String
+}

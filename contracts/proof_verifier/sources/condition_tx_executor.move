@@ -90,8 +90,8 @@ module proof_verifier::condition_tx_executor {
         list_of_condition_accounts: vector<vector<u8>>,
         list_of_condition_operators: vector<u8>,
         list_of_condition_values: vector<u256>,
-        actionTarget: address,
-        actionValue: u256,
+        action_target: address,
+        action_value: u256,
         escrow: coin::Coin<SUI>,
         ctx: &mut TxContext
     ) {
@@ -99,7 +99,7 @@ module proof_verifier::condition_tx_executor {
         assert!(length == vector::length(&list_of_condition_operators), E_BAD_INPUT);
         assert!(length == vector::length(&list_of_condition_values), E_BAD_INPUT);
         assert!(length > 0, E_BAD_INPUT);
-        assert!((coin::value(&escrow) as u256) == actionValue, E_BAD_INPUT);
+        assert!((coin::value(&escrow) as u256) == action_value, E_BAD_INPUT);
 
         let mut list_of_conditions = vector::empty<Condition>();
         let mut i: u64 = 0;
@@ -122,7 +122,7 @@ module proof_verifier::condition_tx_executor {
 
         let condition_tx = ConditionTx {
             list_of_conditions,
-            action: TxAction { recipient: actionTarget, amount: actionValue },
+            action: TxAction { recipient: action_target, amount: action_value },
         };
         push_condition_tx_to_oracle(oracle, condition_tx, ctx);
         balance::join(&mut oracle.vault, coin::into_balance(escrow));

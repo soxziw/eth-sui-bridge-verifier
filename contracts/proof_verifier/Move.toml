@@ -1,5 +1,5 @@
 [package]
-name = "verifier"
+name = "proof_verifier"
 version = "0.0.1"
 edition = "2024.beta"
 

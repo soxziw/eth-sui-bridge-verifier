@@ -1,9 +1,9 @@
-module eth_proof_verifier::mpt_proof_verifier {
+module proof_verifier::mpt_proof_verifier {
     use std::string::String;
     use sui::package;
     use sui::hash::keccak256;
-    use eth_proof_verifier::condition_tx_executor;
-    use eth_proof_verifier::state_root_registry;
+    use proof_verifier::condition_tx_executor;
+    use proof_verifier::state_root_registry;
 
     const E_MISSING_STATE_ROOT: u64 = 1;
     const E_ACCOUNT_NOT_FOUND: u64 = 2;
@@ -48,7 +48,7 @@ module eth_proof_verifier::mpt_proof_verifier {
 
     public fun verify_mpt_proof(
         state_root_oracle: &state_root_registry::StateRootOracle,
-        tx_action_oracle: &mut condition_tx_executor::TxActionOracle,
+        condition_tx_oracle: &mut condition_tx_executor::ConditionTxOracle,
         block_number: u64,
         account: vector<u8>,
         account_proof: vector<vector<u8>>,
@@ -69,7 +69,7 @@ module eth_proof_verifier::mpt_proof_verifier {
         let key32 = keccak256(&account);
         let nibbles = to_nibbles(&key32); // 64 bytes each in 0..15
 
-        let rlp_value = mpt_get(state_root, &nibbles, &account_proof);
+        let rlp_value = mpt_get(&state_root, &nibbles, &account_proof);
         assert!(vector::length(&rlp_value) > 0, E_ACCOUNT_NOT_FOUND);
 
         let decoded = decode_account_rlp(&rlp_value);
@@ -80,7 +80,7 @@ module eth_proof_verifier::mpt_proof_verifier {
         assert!(decoded.code_hash == expected_code_hash, E_FIELD_MISMATCH);
 
         condition_tx_executor::submit_verified_account(
-            tx_action_oracle,
+            condition_tx_oracle,
             account,
             expected_balance,
             ctx
@@ -369,8 +369,8 @@ module eth_proof_verifier::mpt_proof_verifier {
     /// RLP integer decoding (big-endian, empty => 0)
     fun rlp_be_uint_u256(bytes: &vector<u8>): u256 {
         let mut out: u256 = 0;
-        let mut i: u256 = 0;
-        while (i < (vector::length(bytes) as u256)) {
+        let mut i: u64 = 0;
+        while (i < (vector::length(bytes) as u64)) {
             out = (out << 8) | (*vector::borrow(bytes, i) as u256);
             i = i + 1;
         };

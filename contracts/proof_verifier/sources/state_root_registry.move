@@ -2,7 +2,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-module eth_proof_verifier::state_root_registry {
+module proof_verifier::state_root_registry {
     use std::string::String;
     use sui::dynamic_object_field as dof;
     use sui::package;
@@ -70,12 +70,12 @@ module eth_proof_verifier::state_root_registry {
     public fun get_state_root_by_block_number(
         oracle: &StateRootOracle,
         block_number: u64
-    ): &vector<u8> {
+    ): vector<u8> {
         assert!(
             dof::exists_with_type<u64, BlockStateRootOracle>(&oracle.id, block_number),
             E_MISSING_STATE_ROOT
         );
         let rec = dof::borrow<u64, BlockStateRootOracle>(&oracle.id, block_number);
-        &rec.state_root
+        rec.state_root
     }
 }

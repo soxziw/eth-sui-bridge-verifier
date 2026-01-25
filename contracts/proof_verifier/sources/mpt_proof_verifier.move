@@ -4,6 +4,7 @@ module proof_verifier::mpt_proof_verifier {
     use sui::hash::keccak256;
     use proof_verifier::condition_tx_executor;
     use proof_verifier::state_root_registry;
+    use sui::event;
 
     const E_MISSING_STATE_ROOT: u64 = 1;
     const E_ACCOUNT_NOT_FOUND: u64 = 2;
@@ -31,6 +32,7 @@ module proof_verifier::mpt_proof_verifier {
     public struct MPTProofVerifier has key {
         id: UID,
         address: address,
+        next_mpt_proof_id: u256,
         name: String,
         description: String,
     }
@@ -41,12 +43,14 @@ module proof_verifier::mpt_proof_verifier {
         transfer::share_object(MPTProofVerifier {
             id: object::new(ctx),
             address: ctx.sender(),
+            next_mpt_proof_id: 0,
             name: b"EthProofVerifier".to_string(),
             description: b"A eth proof verifier.".to_string(),
         });
     }
 
     public fun verify_mpt_proof(
+        mpt_proof_verifier: &mut MPTProofVerifier,
         state_root_oracle: &state_root_registry::StateRootOracle,
         condition_tx_oracle: &mut condition_tx_executor::ConditionTxOracle,
         block_number: u64,
@@ -74,10 +78,19 @@ module proof_verifier::mpt_proof_verifier {
 
         let decoded = decode_account_rlp(&rlp_value);
 
+        let mpt_proof_id = mpt_proof_verifier.next_mpt_proof_id;
+        mpt_proof_verifier.next_mpt_proof_id = mpt_proof_id + 1;
         assert!(decoded.nonce == expected_nonce, E_FIELD_MISMATCH);
         assert!(decoded.balance == expected_balance, E_FIELD_MISMATCH);
         assert!(decoded.storage_root == expected_storage_root, E_FIELD_MISMATCH);
         assert!(decoded.code_hash == expected_code_hash, E_FIELD_MISMATCH);
+
+        event::emit(MPTProofVerified {
+            id: mpt_proof_id,
+            block_number: block_number,
+            account: account,
+            balance: decoded.balance,
+        });
 
         condition_tx_executor::submit_verified_account(
             condition_tx_oracle,
@@ -375,5 +388,36 @@ module proof_verifier::mpt_proof_verifier {
             i = i + 1;
         };
         out
+    }
+
+    public struct MPTProofVerified has copy, drop {
+        id: u256,
+        block_number: u64,
+        account: vector<u8>,
+        balance: u256,
+    }
+
+    #[test_only]
+    public fun new_for_testing(ctx: &mut TxContext): MPTProofVerifier {
+        let verifier = MPTProofVerifier {
+            id: object::new(ctx),
+            address: ctx.sender(),
+            next_mpt_proof_id: 0,
+            name: b"MPTProofVerifier(test)".to_string(),
+            description: b"test mpt proof verifier".to_string(),
+        };
+        verifier
+    }
+
+    #[test_only]
+    public fun destroy_verifier_for_testing(verifier: MPTProofVerifier) {
+        let MPTProofVerifier {
+            id,
+            address: _,
+            next_mpt_proof_id: _,
+            name: _,
+            description: _,
+        } = verifier;
+        object::delete(id);
     }
 }

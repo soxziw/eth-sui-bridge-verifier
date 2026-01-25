@@ -37,66 +37,67 @@ function hexToNumberArray(hex: string): number[] {
 }
 
 const submitStateRoots = async (stateRoots: [blockNumber: string, stateRoot: string][]) => {
-	// const txb = new Transaction();
-    // const stateRootAdminCap = await getOwnedObjects('state_root_registry', 'AdminCap');
+	const txb = new Transaction();
+    const stateRootAdminCap = await getOwnedObjects('state_root_registry', 'AdminCap');
 
-    // if (!stateRootAdminCap || !stateRootAdminCap[0]) throw new Error('State root admin cap not found');
-    // const stateRootAdminCapObjectId = stateRootAdminCap[0].objectId;
-    // const stateRootOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.stateRootOracleId;
-    // if (!stateRootAdminCapObjectId || !stateRootOracleObjectId) throw new Error('State root admin cap or oracle object id not found');
+    if (!stateRootAdminCap || !stateRootAdminCap[0]) throw new Error('State root admin cap not found');
+    const stateRootAdminCapObjectId = stateRootAdminCap[0].objectId;
+    const stateRootOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.stateRootOracleId;
+    if (!stateRootAdminCapObjectId || !stateRootOracleObjectId) throw new Error('State root admin cap or oracle object id not found');
 
     const listOfBlockNumbers = stateRoots.map(([blockNumber, _]) => BigInt(blockNumber));
     const listOfStateRoots = stateRoots.map(([_, stateRoot]) => hexToNumberArray(stateRoot));
 
     console.log('Submitting state roots...');
     console.log("Block numbers:", listOfBlockNumbers);
-    // console.log("State roots:", listOfStateRoots);
-    // txb.moveCall({
-    //     target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::state_root_registry::submit_state_roots`,
-    //     arguments: [
-    //         txb.object(stateRootAdminCapObjectId),
-    //         txb.object(stateRootOracleObjectId),
-    //         txb.pure.vector('u64', listOfBlockNumbers),
-    //         txb.pure.vector('vector<u8>', listOfStateRoots)
-    //     ],
-    // });
+    
+    txb.moveCall({
+        target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::state_root_registry::submit_state_roots`,
+        arguments: [
+            txb.object(stateRootAdminCapObjectId),
+            txb.object(stateRootOracleObjectId),
+            txb.pure.vector('u64', listOfBlockNumbers),
+            txb.pure.vector('vector<u8>', listOfStateRoots)
+        ],
+    });
 
-    // const res = await signAndExecute(txb, ACTIVE_NETWORK);
+    const res = await signAndExecute(txb, ACTIVE_NETWORK);
 
-    // if (!res.objectChanges || res.objectChanges.length === 0)
-    //     throw new Error('Something went wrong while creating state roots.');
+    if (!res.objectChanges || res.objectChanges.length === 0)
+        throw new Error('Something went wrong while creating state roots.');
 
-    // console.log('Successfully created state roots.');
+    console.log('Successfully created state roots.');
 };
 
 const deleteStateRoots = async (blockNumbers: string[]) => {
-	// const txb = new Transaction();
-    // const stateRootAdminCap = await getOwnedObjects('state_root_registry', 'AdminCap');
+	const txb = new Transaction();
+    const stateRootAdminCap = await getOwnedObjects('state_root_registry', 'AdminCap');
 
-    // if (!stateRootAdminCap || !stateRootAdminCap[0]) throw new Error('State root admin cap not found');
-    // const stateRootAdminCapObjectId = stateRootAdminCap[0].objectId;
-    // const stateRootOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.stateRootOracleId;
-    // if (!stateRootAdminCapObjectId || !stateRootOracleObjectId) throw new Error('State root admin cap or oracle object id not found');
+    if (!stateRootAdminCap || !stateRootAdminCap[0]) throw new Error('State root admin cap not found');
+    const stateRootAdminCapObjectId = stateRootAdminCap[0].objectId;
+    const stateRootOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.stateRootOracleId;
+    if (!stateRootAdminCapObjectId || !stateRootOracleObjectId) throw new Error('State root admin cap or oracle object id not found');
 
     const listOfBlockNumbers = blockNumbers.map((blockNumber) => BigInt(blockNumber));
 
     console.log('Deleting state roots...');
     console.log("Block numbers:", listOfBlockNumbers);
-    // txb.moveCall({
-    //     target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::state_root_registry::delete_state_roots`,
-    //     arguments: [
-    //         txb.object(stateRootAdminCapObjectId),
-    //         txb.object(stateRootOracleObjectId),
-    //         txb.pure.vector('u64', listOfBlockNumbers),
-    //     ],
-    // });
 
-    // const res = await signAndExecute(txb, ACTIVE_NETWORK);
+    txb.moveCall({
+        target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::state_root_registry::delete_state_roots`,
+        arguments: [
+            txb.object(stateRootAdminCapObjectId),
+            txb.object(stateRootOracleObjectId),
+            txb.pure.vector('u64', listOfBlockNumbers),
+        ],
+    });
 
-    // if (!res.objectChanges || res.objectChanges.length === 0)
-    //     throw new Error('Something went wrong while deleting state roots.');
+    const res = await signAndExecute(txb, ACTIVE_NETWORK);
 
-    // console.log('Successfully deleted state roots.');
+    if (!res.objectChanges || res.objectChanges.length === 0)
+        throw new Error('Something went wrong while deleting state roots.');
+
+    console.log('Successfully deleted state roots.');
 };
 
 const getFinalizedBlockStateRoot = async (): Promise<[blockNumber: bigint, stateRoot: string]> => {
@@ -177,7 +178,7 @@ const updateStateRootRegistry = async (bufferSize: number, lastFinalizedBlockNum
     await submitStateRoots(stateRootsToSubmit.map(([blockNumber, stateRoot]) => [blockNumber.toString(), stateRoot]));
 
     const blockNumbersToDelete: string[] = [];
-    for (let i: bigint = lastFinalizedBlockNumber - BigInt(bufferSize) + 1n; i <= minBigInt(lastFinalizedBlockNumber, blockNumber - BigInt(bufferSize)); i += 1n) {
+    for (let i: bigint = minBigInt(lastFinalizedBlockNumber, blockNumber - BigInt(bufferSize)); i >= lastFinalizedBlockNumber - BigInt(bufferSize) + 1n; i -= 1n) {
         blockNumbersToDelete.push(i.toString());
     }
     await deleteStateRoots(blockNumbersToDelete);

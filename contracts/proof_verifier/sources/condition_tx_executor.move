@@ -1,15 +1,12 @@
 module proof_verifier::condition_tx_executor {
     use std::string::String;
     use std::string;
-    use std::bcs;
     use sui::dynamic_object_field as dof;
     use sui::package;
     use sui::balance;
     use sui::coin;
     use sui::sui::SUI;
     use sui::event;
-    use sui::hex;
-    use sui::address;
 
     /// Define a capability for the admin of the oracle.
     public struct AdminCap has key, store { id: UID }
@@ -95,32 +92,20 @@ module proof_verifier::condition_tx_executor {
     fun emit_condition_tx_created(
         condition_tx: ConditionTx
     ) {
-        let mut next_condition = string::utf8(b"");
-        string::append(&mut next_condition, string::utf8(hex::encode(condition_tx.list_of_conditions[0].account)));
-        string::append(&mut next_condition, string::utf8(b".balance"));
-        string::append(&mut next_condition, match (condition_tx.list_of_conditions[0].operator) {
-            Operator::GT => string::utf8(b" > "),
-            Operator::GTE => string::utf8(b" >= "),
-            Operator::LT => string::utf8(b" < "),
-            Operator::LTE => string::utf8(b" <= "),
-            Operator::EQ => string::utf8(b" == "),
-            Operator::NEQ => string::utf8(b" != "),
-        });
-        string::append(
-            &mut next_condition,
-            string::utf8(hex::encode(bcs::to_bytes(&condition_tx.list_of_conditions[0].value)))
-        );
-        let mut action = string::utf8(b"");
-        string::append(&mut action, string::utf8(b"transfer "));
-        string::append(&mut action, address::to_string(condition_tx.action.recipient));
-        string::append(&mut action, string::utf8(b" "));
-        string::append(&mut action, string::utf8(hex::encode(bcs::to_bytes(&condition_tx.action.amount))));
-        let last_status = string::utf8(b"new");
         event::emit(ConditionTxCreated {
             id: condition_tx.id,
-            next_condition: next_condition,
-            action: action,
-            last_status: last_status,
+            condition_account: condition_tx.list_of_conditions[0].account,
+            condition_operator: match (condition_tx.list_of_conditions[0].operator) {
+                Operator::GT => string::utf8(b"GT"),
+                Operator::GTE => string::utf8(b"GTE"),
+                Operator::LT => string::utf8(b"LT"),
+                Operator::LTE => string::utf8(b"LTE"),
+                Operator::EQ => string::utf8(b"EQ"),
+                Operator::NEQ => string::utf8(b"NEQ"),
+            },
+            condition_value: condition_tx.list_of_conditions[0].value,
+            action_target: condition_tx.action.recipient,
+            action_value: condition_tx.action.amount,
         });
     }
 
@@ -247,7 +232,7 @@ module proof_verifier::condition_tx_executor {
                     if (!list_of_condition_met[m]) {
                         vector::push_back(&mut new_list_of_condition_tx, account_condition_tx_oracle.list_of_condition_tx[m]);
                     } else {
-                        event::emit(ConditionTxDeleted {
+                        event::emit(ConditionTxCompleted {
                             id: account_condition_tx_oracle.list_of_condition_tx[m].id,
                         });
                     };
@@ -273,12 +258,14 @@ module proof_verifier::condition_tx_executor {
 
     public struct ConditionTxCreated has copy, drop {
         id: u256,
-        next_condition: String,
-        action: String,
-        last_status: String,
+        condition_account: vector<u8>,
+        condition_operator: String,
+        condition_value: u256,
+        action_target: address,
+        action_value: u256,
     }
 
-    public struct ConditionTxDeleted has copy, drop {
+    public struct ConditionTxCompleted has copy, drop {
         id: u256,
     }
 

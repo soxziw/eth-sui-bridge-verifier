@@ -3,6 +3,7 @@
 
 import { Transaction } from '@mysten/sui/transactions';
 
+import 'dotenv/config';
 import { CONFIG } from '../config';
 import { ACTIVE_NETWORK, getActiveAddress, getClient, signAndExecute } from '../sui-utils';
 
@@ -113,7 +114,7 @@ const submitCommandWithEscrow = async (conditions: [account: string, operator: s
 
 const verifyMPTProof = async (blockNumber: string, account: string) => {
     // eth_getProof (POST /:apiKey)
-    const response = await fetch("https://eth-mainnet.g.alchemy.com/v2/SZIIYGbKh3CuqTLZDlBNh", {
+    const response = await fetch(`https://${process.env.ETH_NETWORK}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"

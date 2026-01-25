@@ -7,7 +7,8 @@ module proof_verifier::condition_tx_executor {
     use sui::coin;
     use sui::sui::SUI;
     use sui::event;
-
+    use sui::hex;
+    
     /// Define a capability for the admin of the oracle.
     public struct AdminCap has key, store { id: UID }
 
@@ -94,7 +95,7 @@ module proof_verifier::condition_tx_executor {
     ) {
         event::emit(ConditionTxCreated {
             id: condition_tx.id,
-            condition_account: condition_tx.list_of_conditions[0].account,
+            condition_account: string::utf8(hex::encode(condition_tx.list_of_conditions[0].account)),
             condition_operator: match (condition_tx.list_of_conditions[0].operator) {
                 Operator::GT => string::utf8(b"GT"),
                 Operator::GTE => string::utf8(b"GTE"),
@@ -258,7 +259,7 @@ module proof_verifier::condition_tx_executor {
 
     public struct ConditionTxCreated has copy, drop {
         id: u256,
-        condition_account: vector<u8>,
+        condition_account: String,
         condition_operator: String,
         condition_value: u256,
         action_target: address,

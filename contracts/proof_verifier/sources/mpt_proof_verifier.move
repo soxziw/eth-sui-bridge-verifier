@@ -1,11 +1,13 @@
 module proof_verifier::mpt_proof_verifier {
     use std::string::String;
+    use std::string;
     use sui::package;
     use sui::hash::keccak256;
     use proof_verifier::condition_tx_executor;
     use proof_verifier::state_root_registry;
     use sui::event;
-
+    use sui::hex;
+    
     const E_MISSING_STATE_ROOT: u64 = 1;
     const E_ACCOUNT_NOT_FOUND: u64 = 2;
     const E_FIELD_MISMATCH: u64 = 3;
@@ -88,7 +90,7 @@ module proof_verifier::mpt_proof_verifier {
         event::emit(MPTProofVerified {
             id: mpt_proof_id,
             block_number: block_number,
-            account: account,
+            account: string::utf8(hex::encode(account)),
             balance: decoded.balance,
         });
 
@@ -393,7 +395,7 @@ module proof_verifier::mpt_proof_verifier {
     public struct MPTProofVerified has copy, drop {
         id: u256,
         block_number: u64,
-        account: vector<u8>,
+        account: String,
         balance: u256,
     }
 

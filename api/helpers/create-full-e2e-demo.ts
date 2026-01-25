@@ -75,7 +75,7 @@ const OP_MAP: Record<Operator, number> = {
   EQ: 4,
   NEQ: 5,
 };
-const submitCommandWithEscrow = async (conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinObjectId: string) => {
+const submitCommandWithEscrow = async (conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinValue: string) => {
 	const txb = new Transaction();
     const conditionTxAdminCap = await getOwnedObjects('condition_tx_executor', 'AdminCap');
 
@@ -89,6 +89,7 @@ const submitCommandWithEscrow = async (conditions: [account: string, operator: s
     const listOfConditionOperators = conditions.map(([_, operator, __]) => OP_MAP[operator as Operator]);
     const listOfConditionBalances = conditions.map(([_, __, balance]) => BigInt(balance));
 
+    const escrowCoin = txb.splitCoins(txb.gas, [txb.pure.u64(escrowCoinValue)]);
     txb.moveCall({
         target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::condition_tx_executor::submit_command_with_escrow`,
         arguments: [
@@ -98,7 +99,7 @@ const submitCommandWithEscrow = async (conditions: [account: string, operator: s
             txb.pure.vector('u8', listOfConditionOperators),
             txb.pure.vector('u256', listOfConditionBalances),
             txb.pure.address(actionTarget),
-            txb.object(escrowCoinObjectId),
+            escrowCoin,
         ],
     });
 
@@ -175,7 +176,7 @@ const nonZeroStateRoot = '0xf2fbda72af80ff49713383cb988697dcfabc880832eb91fafbf7
 const nonZeroAccount = '0x6c8f2a135f6ed072de4503bd7c4999a1a17f824b';
 
 const receiver = '0x08866b897d05fc1fc955248612f09e30f9684da753765272735df63a6490a8d9';
-const escrowCoinObjectId = '0x578b9396e6bb6e1742c75f83e12386b68b337486a48ed58d273cb58f443e5335';
+const escrowCoinValue = '123';
 
 async function main() {
     await submitStateRoots([
@@ -187,7 +188,7 @@ async function main() {
         [
             [zeroAccount, 'EQ', '0x0'],
             [nonZeroAccount, 'GTE', '0x470de4df8200000'],
-        ], receiver, escrowCoinObjectId
+        ], receiver, escrowCoinValue
     );
 
     await verifyMPTProof(zeroBlockNumber, zeroAccount);

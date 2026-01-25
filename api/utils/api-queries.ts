@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../config';
 
 export type ApiPagination = {
 	take?: number;

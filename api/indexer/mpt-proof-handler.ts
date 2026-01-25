@@ -9,7 +9,7 @@ type MPTProofEvent = MPTProofVerified;
 
 type MPTProofVerified = {
 	id: string;
-	blockNumber: string;
+	block_number: string;
 	account: string;
 	balance: string;
 };
@@ -29,7 +29,7 @@ export const handleMPTProofsObjects = async (events: SuiEvent[], type: string) =
 		const data = event.parsedJson as MPTProofEvent;
         updates[data.id] = {
             objectId: data.id,
-            blockNumber: "0x" + BigInt(data.blockNumber).toString(16),
+            blockNumber: "0x" + BigInt(data.block_number).toString(16),
             account: data.account,
             balance: "0x" + BigInt(data.balance).toString(16),
         };

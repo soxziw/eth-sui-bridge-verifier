@@ -8,12 +8,12 @@ import { prisma } from '../db';
 type StateRootEvent = StateRootCreatedOrUpdated | StateRootDeleted;
 
 type StateRootCreatedOrUpdated = {
-	blockNumber: string;
+	block_number: string;
 	stateRoot: string;
 };
 
 type StateRootDeleted = {
-	blockNumber: string;
+	block_number: string;
 };
 
 /**
@@ -31,7 +31,7 @@ export const handleStateRootObjects = async (events: SuiEvent[], type: string) =
 		const data = event.parsedJson as StateRootEvent;
 		const isDeletionEvent = !('stateRoot' in data);
 
-		const blockNumberHex = "0x" + BigInt(data.blockNumber).toString(16);
+		const blockNumberHex = "0x" + BigInt(data.block_number).toString(16);
 		// Handle deletion
 		if (isDeletionEvent) {
 			delete updates[blockNumberHex];

@@ -9,8 +9,8 @@
 		"db:setup:dev": "npx prisma migrate dev --name init",
 		"db:reset:dev": "npx prisma db push --force-reset",
 		"db:studio": "npx prisma studio",
-		"api:dev": "npx --loader ts-node/esm server.ts",
-		"indexer": "npx --loader ts-node/esm indexer.ts"
+		"api:dev": "npx ts-node server.ts",
+		"indexer": "npx ts-node indexer.ts"
 	},
 	"keywords": [],
 	"author": "",

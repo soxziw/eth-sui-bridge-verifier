@@ -5,7 +5,7 @@ import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
-import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
+import { getFullnodeUrl, SuiClient, SuiObjectChange } from '@mysten/sui/client';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { Transaction } from '@mysten/sui/transactions';
 import { fromBase64 } from '@mysten/sui/utils';
@@ -93,12 +93,36 @@ export const publishPackage = async ({
 
 	// @ts-ignore-next-line
 	const packageId = results.objectChanges?.find((x) => x.type === 'published')?.packageId;
+    const stateRootOracleId =
+        (results.objectChanges ?? []).find(
+        (c): c is Extract<SuiObjectChange, { type: 'created' }> =>
+            c.type === 'created' &&
+            c.objectType ===
+            `${packageId}::state_root_registry::StateRootOracle`,
+        )?.objectId;
+    const conditionTxOracleId =
+        (results.objectChanges ?? []).find(
+        (c): c is Extract<SuiObjectChange, { type: 'created' }> =>
+            c.type === 'created' &&
+            c.objectType ===
+            `${packageId}::condition_tx_executor::ConditionTxOracle`,
+        )?.objectId;
+    const mptProofVerifierId =
+        (results.objectChanges ?? []).find(
+        (c): c is Extract<SuiObjectChange, { type: 'created' }> =>
+            c.type === 'created' &&
+            c.objectType ===
+            `${packageId}::mpt_proof_verifier::MPTProofVerifier`,
+        )?.objectId;
 
 	// save to an env file
 	writeFileSync(
 		`${exportFileName}.json`,
 		JSON.stringify({
 			packageId,
+			stateRootOracleId,
+			conditionTxOracleId,
+			mptProofVerifierId,
 		}),
 		{ encoding: 'utf8', flag: 'w' },
 	);

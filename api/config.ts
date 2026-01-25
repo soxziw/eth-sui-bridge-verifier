@@ -23,5 +23,5 @@ export const CONFIG = {
 	POLLING_INTERVAL_MS: 1000,
 	DEFAULT_LIMIT: 50,
 	NETWORK: (process.env.NETWORK as Network) || 'testnet',
-	PROOF_VERIFIER_CONTRACT: parseConfigurationFile('proof_verifier-contract'),
+	PROOF_VERIFIER_CONTRACT: parseConfigurationFile('proof-verifier-contract'),
 };

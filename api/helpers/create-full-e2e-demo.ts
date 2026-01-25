@@ -38,11 +38,10 @@ function hexToNumberArray(hex: string): number[] {
 const submitStateRoots = async (stateRoots: [blockNumber: string, stateRoot: string][]) => {
 	const txb = new Transaction();
     const stateRootAdminCap = await getOwnedObjects('state_root_registry', 'AdminCap');
-    const stateRootOracle = await getOwnedObjects('state_root_registry', 'StateRootOracle');
 
-    if (!stateRootAdminCap || !stateRootOracle || !stateRootAdminCap[0] || !stateRootOracle[0]) throw new Error('State root admin cap or oracle not found');
+    if (!stateRootAdminCap || !stateRootAdminCap[0]) throw new Error('State root admin cap not found');
     const stateRootAdminCapObjectId = stateRootAdminCap[0].objectId;
-    const stateRootOracleObjectId = stateRootOracle[0].objectId;
+    const stateRootOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.stateRootOracleId;
     if (!stateRootAdminCapObjectId || !stateRootOracleObjectId) throw new Error('State root admin cap or oracle object id not found');
 
     const listOfBlockNumbers = stateRoots.map(([blockNumber, _]) => BigInt(blockNumber));
@@ -79,11 +78,10 @@ const OP_MAP: Record<Operator, number> = {
 const submitCommandWithEscrow = async (conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinObjectId: string) => {
 	const txb = new Transaction();
     const conditionTxAdminCap = await getOwnedObjects('condition_tx_executor', 'AdminCap');
-    const conditionTxOracle = await getOwnedObjects('condition_tx_executor', 'ConditionTxOracle');
 
-    if (!conditionTxAdminCap || !conditionTxOracle || !conditionTxAdminCap[0] || !conditionTxOracle[0]) throw new Error('Condition tx admin cap or oracle not found');
+    if (!conditionTxAdminCap || !conditionTxAdminCap[0]) throw new Error('Condition tx admin cap not found');
     const conditionTxAdminCapObjectId = conditionTxAdminCap[0].objectId;
-    const conditionTxOracleObjectId = conditionTxOracle[0].objectId;
+    const conditionTxOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.conditionTxOracleId;
     if (!conditionTxAdminCapObjectId || !conditionTxOracleObjectId) throw new Error('Condition tx admin cap or oracle object id not found');
 
 
@@ -139,14 +137,9 @@ const verifyMPTProof = async (blockNumber: string, account: string) => {
 
 
     const txb = new Transaction();
-    const mptProofVerifier = await getOwnedObjects('mpt_proof_verifier', 'MPTProofVerifier');
-    const stateRootOracle = await getOwnedObjects('state_root_registry', 'StateRootOracle');
-    const conditionTxOracle = await getOwnedObjects('condition_tx_executor', 'ConditionTxOracle');
-
-    if (!mptProofVerifier || !stateRootOracle || !conditionTxOracle || !mptProofVerifier[0] || !stateRootOracle[0] || !conditionTxOracle[0]) throw new Error('MPT proof verifier, state root oracle or condition tx oracle not found');
-    const mptProofVerifierObjectId = mptProofVerifier[0].objectId;
-    const stateRootOracleObjectId = stateRootOracle[0].objectId;
-    const conditionTxOracleObjectId = conditionTxOracle[0].objectId;
+    const mptProofVerifierObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.mptProofVerifierId;
+    const stateRootOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.stateRootOracleId;
+    const conditionTxOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.conditionTxOracleId;
     if (!mptProofVerifierObjectId || !stateRootOracleObjectId || !conditionTxOracleObjectId) throw new Error('MPT proof verifier, state root oracle or condition tx oracle object id not found');
 
     txb.moveCall({

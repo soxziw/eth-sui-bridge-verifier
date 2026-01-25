@@ -4,8 +4,11 @@
 
 module proof_verifier::state_root_registry {
     use std::string::String;
+    use std::string;
     use sui::dynamic_object_field as dof;
     use sui::package;
+    use sui::event;
+    use sui::hex;
     
     const E_MISSING_STATE_ROOT: u64 = 1;
     
@@ -64,9 +67,17 @@ module proof_verifier::state_root_registry {
                         state_root, // Set the state root of the block state root oracle object
                     }
                 );
+                event::emit(StateRootCreated {
+                    block_number: block_number,
+                    state_root: string::utf8(hex::encode(state_root)),
+                });
             } else {
                 let block_state_root_oracle_mut = dof::borrow_mut<u64, BlockStateRootOracle>(&mut oracle.id, block_number);
                 block_state_root_oracle_mut.state_root = state_root;
+                event::emit(StateRootUpdated {
+                    block_number: block_number,
+                    state_root: string::utf8(hex::encode(state_root)),
+                });
             };
             i = i + 1;
         }   
@@ -81,6 +92,9 @@ module proof_verifier::state_root_registry {
         while (i < vector::length(&list_of_block_numbers)) {
             let block_number = list_of_block_numbers[i];
             if (dof::exists_with_type<u64, BlockStateRootOracle>(&oracle.id, block_number)) {
+                event::emit(StateRootDeleted {
+                    block_number: block_number,
+                });
                 let BlockStateRootOracle {
                     id,
                     block_number: _,
@@ -103,6 +117,20 @@ module proof_verifier::state_root_registry {
         );
         let rec = dof::borrow<u64, BlockStateRootOracle>(&oracle.id, block_number);
         rec.state_root
+    }
+
+    public struct StateRootCreated has copy, drop {
+        block_number: u64,
+        state_root: String,
+    }
+
+    public struct StateRootUpdated has copy, drop {
+        block_number: u64,
+        state_root: String,
+    }
+
+    public struct StateRootDeleted has copy, drop {
+        block_number: u64,
     }
 
     #[test_only]

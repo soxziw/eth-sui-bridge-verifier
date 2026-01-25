@@ -4,14 +4,14 @@
 import cors from 'cors';
 import express from 'express';
 
-import { prisma } from './db.js';
+import { prisma } from './db';
 import {
 	formatPaginatedResponse,
 	parsePaginationForQuery,
 	parseWhereStatement,
 	WhereParam,
 	WhereParamTypes,
-} from './utils/api-queries.js';
+} from './utils/api-queries';
 
 const app = express();
 app.use(cors());
@@ -27,11 +27,7 @@ app.get('/state-roots', async (req, res) => {
 		{
 			key: 'blockNumber',
 			type: WhereParamTypes.STRING,
-		},
-        {
-            key: 'stateRoot',
-            type: WhereParamTypes.STRING,
-        }
+		}
 	];
 
 	try {
@@ -48,42 +44,18 @@ app.get('/state-roots', async (req, res) => {
 });
 
 app.get('/condition-txs', async (req, res) => {
-    const acceptedConditions: WhereParam[] = [
-        {
-            key: 'account',
-            type: WhereParamTypes.STRING,
-        },
-        {
-            key: 'operator',
-            type: WhereParamTypes.STRING,
-        },
-        {
-            key: 'value',
-            type: WhereParamTypes.STRING,
-        },
-    ];
-    const acceptedAction: WhereParam[] = [
-        {
-            key: 'recipient',
-            type: WhereParamTypes.STRING,
-        },
-        {
-            key: 'amount',
-            type: WhereParamTypes.STRING,
-        },
-    ];
 	const acceptedQueries: WhereParam[] = [
 		{
-			key: 'conditionTxId',
+			key: 'nextConditionAccount',
 			type: WhereParamTypes.STRING,
 		},
         {
-            key: 'conditions',
-            type: WhereParamTypes.JSON,
+            key: 'actionTarget',
+            type: WhereParamTypes.STRING,
         },
         {
-            key: 'action',
-            type: WhereParamTypes.JSON,
+            key: 'completed',
+            type: WhereParamTypes.BOOLEAN,
         },
 	];
 
@@ -103,7 +75,11 @@ app.get('/condition-txs', async (req, res) => {
 app.get('/mpt-proofs', async (req, res) => {
 	const acceptedQueries: WhereParam[] = [
 		{
-			key: 'objectId',
+			key: 'blockNumber',
+			type: WhereParamTypes.STRING,
+		},
+		{
+			key: 'account',
 			type: WhereParamTypes.STRING,
 		},
 	];

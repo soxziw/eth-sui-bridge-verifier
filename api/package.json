@@ -1,8 +1,8 @@
 {
-  "name": "api",
-  "version": "1.0.0",
-  "type": "module",
-  "description": "",
+	"name": "api",
+	"version": "1.0.0",
+	"private": true,
+	"description": "",
 	"main": "server.ts",
 	"scripts": {
 		"dev": "concurrently \"pnpm api:dev\" \"pnpm indexer\"",

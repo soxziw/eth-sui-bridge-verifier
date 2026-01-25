@@ -3,19 +3,15 @@
 import { SuiEvent } from '@mysten/sui/client';
 import { Prisma } from '@prisma/client';
 
-import { prisma } from '../db.js';
+import { prisma } from '../db';
 
-type MPTProofEvent = MPTProofCreated;
+type MPTProofEvent = MPTProofVerified;
 
-type MPTProofCreated = {
-	objectId: string;
+type MPTProofVerified = {
+	id: string;
 	blockNumber: string;
 	account: string;
-	accountProof: string[];
-	expectedNonce: string;
-	expectedBalance: string;
-	expectedStorageRoot: string;
-	expectedCodeHash: string;
+	balance: string;
 };
 
 /**
@@ -31,13 +27,12 @@ export const handleMPTProofsObjects = async (events: SuiEvent[], type: string) =
 	for (const event of events) {
 		if (!event.type.startsWith(type)) throw new Error('Invalid event module origin');
 		const data = event.parsedJson as MPTProofEvent;
-		updates[data.objectId].blockNumber = data.blockNumber;
-		updates[data.objectId].account = data.account;
-		updates[data.objectId].accountProof = data.accountProof;
-		updates[data.objectId].expectedNonce = data.expectedNonce;
-		updates[data.objectId].expectedBalance = data.expectedBalance;
-		updates[data.objectId].expectedStorageRoot = data.expectedStorageRoot;
-		updates[data.objectId].expectedCodeHash = data.expectedCodeHash;
+        updates[data.id] = {
+            objectId: data.id,
+            blockNumber: "0x" + BigInt(data.blockNumber).toString(16),
+            account: data.account,
+            balance: "0x" + BigInt(data.balance).toString(16),
+        };
 	}
 
 	//  As part of the demo and to avoid having external dependencies, we use SQLite as our database.
@@ -45,7 +40,7 @@ export const handleMPTProofsObjects = async (events: SuiEvent[], type: string) =
 	// 	(resulting in multiple round-trips to the database).
 	//  Always use a single `bulkInsert` query with proper `onConflict` handling in production databases (e.g Postgres)
 	const promises = Object.values(updates).map((update) =>
-		prisma.mptProof.upsert({
+		prisma.mPTProof.upsert({
 			where: {
 				objectId: update.objectId,
 			},

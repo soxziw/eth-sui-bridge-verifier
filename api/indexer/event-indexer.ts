@@ -3,12 +3,12 @@
 
 import { EventId, SuiClient, SuiEvent, SuiEventFilter } from '@mysten/sui/client';
 
-import { CONFIG } from '../config.js';
-import { prisma } from '../db.js';
-import { getClient } from '../sui-utils.js';
-import { handleStateRootObjects } from './state-root-handler.js';
-import { handleConditionTxsObjects } from './condition-tx-handler.js';
-import { handleMPTProofsObjects } from './mpt-proof-handler.js';
+import { CONFIG } from '../config';
+import { prisma } from '../db';
+import { getClient } from '../sui-utils';
+import { handleStateRootObjects } from './state-root-handler';
+import { handleConditionTxsObjects } from './condition-tx-handler';
+import { handleMPTProofsObjects } from './mpt-proof-handler';
 
 type SuiEventsCursor = EventId | null | undefined;
 
@@ -26,31 +26,31 @@ type EventTracker = {
 
 const EVENTS_TO_TRACK: EventTracker[] = [
 	{
-		type: `${CONFIG.VERIFIER_CONTRACT.packageId}::state_root_registry`,
+		type: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::state_root_registry`,
 		filter: {
 			MoveEventModule: {
 				module: 'state_root_registry',
-				package: CONFIG.VERIFIER_CONTRACT.packageId,
+				package: CONFIG.PROOF_VERIFIER_CONTRACT.packageId,
 			},
 		},
 		callback: handleStateRootObjects,
 	},
 	{
-		type: `${CONFIG.VERIFIER_CONTRACT.packageId}::condition_tx_executor`,
+		type: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::condition_tx_executor`,
 		filter: {
 			MoveEventModule: {
 				module: 'condition_tx_executor',
-				package: CONFIG.VERIFIER_CONTRACT.packageId,
+				package: CONFIG.PROOF_VERIFIER_CONTRACT.packageId,
 			},
 		},
 		callback: handleConditionTxsObjects,
 	},
 	{
-		type: `${CONFIG.VERIFIER_CONTRACT.packageId}::mpt_proof_executor`,
+		type: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::mpt_proof_verifier`,
 		filter: {
 			MoveEventModule: {
-				module: 'mpt_proof_executor',
-				package: CONFIG.VERIFIER_CONTRACT.packageId,
+				module: 'mpt_proof_verifier',
+				package: CONFIG.PROOF_VERIFIER_CONTRACT.packageId,
 			},
 		},
 		callback: handleMPTProofsObjects,

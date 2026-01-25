@@ -22,6 +22,8 @@ module proof_verifier::mpt_proof_verifier_tests {
         let mut state_oracle;
         let mut tx_oracle;
         let mut mpt_proof_verifier;
+        let receiver: address = @0xB0B;
+        let escrow_value: u64 = 123;
         {
             let ctx = ts::ctx(&mut scenario);
 
@@ -89,7 +91,7 @@ module proof_verifier::mpt_proof_verifier_tests {
             );
 
             // ---- fund vault (so split/transfer can succeed) ----
-            let escrow = coin::mint_for_testing<SUI>(123, ctx);
+            let escrow = coin::mint_for_testing<SUI>(escrow_value, ctx);
 
             let mut list_of_condition_account = vector::empty<vector<u8>>();
             vector::push_back(&mut list_of_condition_account, zero_account);
@@ -101,7 +103,6 @@ module proof_verifier::mpt_proof_verifier_tests {
             vector::push_back(&mut list_of_condition_value, zero_expected_balance);
             vector::push_back(&mut list_of_condition_value, non_zero_expected_balance);
             // ---- submit command ----
-            let receiver: address = @0xB0B;
             condition_tx_executor::submit_command_with_escrow(
                 &tx_admin,
                 &mut tx_oracle,
@@ -109,7 +110,6 @@ module proof_verifier::mpt_proof_verifier_tests {
                 list_of_condition_operator,
                 list_of_condition_value,
                 receiver,
-                123,
                 escrow,
                 ctx
             );
@@ -147,7 +147,7 @@ module proof_verifier::mpt_proof_verifier_tests {
         ts::next_tx(&mut scenario, @0xA11CE);
         {
             let coins = ts::take_from_address<coin::Coin<SUI>>(&scenario, @0xB0B);
-            assert!(coins.value() == 123, 1);
+            assert!(coins.value() == escrow_value, 1);
             coin::burn_for_testing(coins);
         };
 

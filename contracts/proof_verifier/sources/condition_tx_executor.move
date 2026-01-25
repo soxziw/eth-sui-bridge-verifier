@@ -8,7 +8,7 @@ module proof_verifier::condition_tx_executor {
     use sui::sui::SUI;
     use sui::event;
     use sui::hex;
-    
+
     /// Define a capability for the admin of the oracle.
     public struct AdminCap has key, store { id: UID }
 
@@ -44,7 +44,7 @@ module proof_verifier::condition_tx_executor {
 
     public struct TxAction has copy, drop, store {
         recipient: address,
-        amount: u256,
+        amount: u64,
     }
 
     public struct ConditionTx has copy, drop, store {
@@ -110,6 +110,24 @@ module proof_verifier::condition_tx_executor {
         });
     }
 
+    fun emit_condition_tx_updated(
+        condition_tx: ConditionTx
+    ) {
+        event::emit(ConditionTxUpdated {
+            id: condition_tx.id,
+            condition_account: string::utf8(hex::encode(condition_tx.list_of_conditions[0].account)),
+            condition_operator: match (condition_tx.list_of_conditions[0].operator) {
+                Operator::GT => string::utf8(b"GT"),
+                Operator::GTE => string::utf8(b"GTE"),
+                Operator::LT => string::utf8(b"LT"),
+                Operator::LTE => string::utf8(b"LTE"),
+                Operator::EQ => string::utf8(b"EQ"),
+                Operator::NEQ => string::utf8(b"NEQ"),
+            },
+            condition_value: condition_tx.list_of_conditions[0].value,
+        });
+    }
+
     public fun submit_command_with_escrow(
         _: &AdminCap,
         oracle: &mut ConditionTxOracle,
@@ -117,15 +135,13 @@ module proof_verifier::condition_tx_executor {
         list_of_condition_operators: vector<u8>,
         list_of_condition_values: vector<u256>,
         action_target: address,
-        action_value: u256,
-        escrow: coin::Coin<SUI>,
+        action_escrow: coin::Coin<SUI>,
         ctx: &mut TxContext
     ) {
         let length = vector::length(&list_of_condition_accounts);
         assert!(length == vector::length(&list_of_condition_operators), E_BAD_INPUT);
         assert!(length == vector::length(&list_of_condition_values), E_BAD_INPUT);
         assert!(length > 0, E_BAD_INPUT);
-        assert!((coin::value(&escrow) as u256) == action_value, E_BAD_INPUT);
 
         let mut list_of_conditions = vector::empty<Condition>();
         let mut i: u64 = 0;
@@ -149,12 +165,12 @@ module proof_verifier::condition_tx_executor {
         let condition_tx = ConditionTx {
             id: oracle.next_condition_tx_id,
             list_of_conditions,
-            action: TxAction { recipient: action_target, amount: action_value },
+            action: TxAction { recipient: action_target, amount: coin::value(&action_escrow)},
         };
         oracle.next_condition_tx_id = oracle.next_condition_tx_id + 1;
         emit_condition_tx_created(condition_tx);
         push_condition_tx_to_oracle(oracle, condition_tx, ctx);
-        balance::join(&mut oracle.vault, coin::into_balance(escrow));
+        balance::join(&mut oracle.vault, coin::into_balance(action_escrow));
     }
 
     fun meets_condition(
@@ -190,7 +206,10 @@ module proof_verifier::condition_tx_executor {
                     if (condition_met) {
                         if (vector::length(&condition_tx.list_of_conditions) == 1) {
                             let action = condition_tx.action;
-                            transfer::public_transfer(coin::from_balance(balance::split(&mut oracle.vault, action.amount as u64), ctx), action.recipient); 
+                            transfer::public_transfer(coin::from_balance(balance::split(&mut oracle.vault, action.amount), ctx), action.recipient);
+                            event::emit(ConditionTxCompleted {
+                                id: condition_tx.id,
+                            });
                         } else {
                             let mut new_list_of_conditions = vector::empty<Condition>();
                             let mut j: u64 = 1;
@@ -199,11 +218,10 @@ module proof_verifier::condition_tx_executor {
                                 j = j + 1;
                             };
                             let new_condition_tx = ConditionTx {
-                                id: oracle.next_condition_tx_id,
+                                id: condition_tx.id,
                                 list_of_conditions: new_list_of_conditions,
                                 action: condition_tx.action,
                             };
-                            oracle.next_condition_tx_id = oracle.next_condition_tx_id + 1;
                             vector::push_back(&mut list_of_new_condition_tx, new_condition_tx);
                         }
                     };
@@ -214,7 +232,7 @@ module proof_verifier::condition_tx_executor {
 
             let mut k = 0;
             while (k < vector::length(&list_of_new_condition_tx)) {
-                emit_condition_tx_created(list_of_new_condition_tx[k]);
+                emit_condition_tx_updated(list_of_new_condition_tx[k]);
                 push_condition_tx_to_oracle(oracle, list_of_new_condition_tx[k], ctx);
                 k = k + 1;
             };
@@ -232,10 +250,6 @@ module proof_verifier::condition_tx_executor {
                 while (m < vector::length(&account_condition_tx_oracle.list_of_condition_tx)) {
                     if (!list_of_condition_met[m]) {
                         vector::push_back(&mut new_list_of_condition_tx, account_condition_tx_oracle.list_of_condition_tx[m]);
-                    } else {
-                        event::emit(ConditionTxCompleted {
-                            id: account_condition_tx_oracle.list_of_condition_tx[m].id,
-                        });
                     };
                     m = m + 1;
                 };
@@ -263,7 +277,14 @@ module proof_verifier::condition_tx_executor {
         condition_operator: String,
         condition_value: u256,
         action_target: address,
-        action_value: u256,
+        action_value: u64,
+    }
+
+    public struct ConditionTxUpdated has copy, drop {
+        id: u256,
+        condition_account: String,
+        condition_operator: String,
+        condition_value: u256,
     }
 
     public struct ConditionTxCompleted has copy, drop {
@@ -294,7 +315,7 @@ module proof_verifier::condition_tx_executor {
             name: _,
             description: _,
         } = oracle;
-        let amount = balance::value(&vault);
+        let amount: u64 = balance::value(&vault);
         coin::burn_for_testing(coin::from_balance(balance::split(&mut vault, amount), ctx));
         balance::destroy_zero(vault);
         object::delete(id);

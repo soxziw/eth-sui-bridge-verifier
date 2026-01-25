@@ -3,16 +3,16 @@
 import { SuiEvent } from '@mysten/sui/client';
 import { Prisma } from '@prisma/client';
 
-import { prisma } from '../db.js';
+import { prisma } from '../db';
 
-type StateRootEvent = StateRootCreated | StateRootDestroyed;
+type StateRootEvent = StateRootCreatedOrUpdated | StateRootDeleted;
 
-type StateRootCreated = {
+type StateRootCreatedOrUpdated = {
 	blockNumber: string;
 	stateRoot: string;
 };
 
-type StateRootDestroyed = {
+type StateRootDeleted = {
 	blockNumber: string;
 };
 
@@ -31,15 +31,22 @@ export const handleStateRootObjects = async (events: SuiEvent[], type: string) =
 		const data = event.parsedJson as StateRootEvent;
 		const isDeletionEvent = !('stateRoot' in data);
 
-
+		const blockNumberHex = "0x" + BigInt(data.blockNumber).toString(16);
 		// Handle deletion
 		if (isDeletionEvent) {
-			delete updates[data.blockNumber];
+			delete updates[blockNumberHex];
 			continue;
 		}
 
-		// Handle creation event
-		updates[data.blockNumber].stateRoot = data.stateRoot;
+		// Handle creation or update event
+		if (updates[blockNumberHex]) {
+			updates[blockNumberHex].stateRoot = data.stateRoot;
+			continue;
+		}
+		updates[blockNumberHex] = {
+			blockNumber: blockNumberHex,
+			stateRoot: data.stateRoot,
+		};
 	}
 
 	//  As part of the demo and to avoid having external dependencies, we use SQLite as our database.

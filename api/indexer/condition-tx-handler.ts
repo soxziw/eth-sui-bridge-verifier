@@ -3,25 +3,28 @@
 import { SuiEvent } from '@mysten/sui/client';
 import { Prisma } from '@prisma/client';
 
-import { prisma } from '../db.js';
+import { prisma } from '../db';
 
-type ConditionTxEvent = ConditionTxCreated;
-
-type Condition = {
-	account: string;
-	operator: string;
-	value: string;
-};
-
-type TxAction = {
-	recipient: string;
-	amount: string;
-};
+type ConditionTxEvent = ConditionTxCreated | ConditionTxUpdated | ConditionTxCompleted;
 
 type ConditionTxCreated = {
-	conditionTxId: string;
-	conditions: Condition[];
-	action: TxAction;
+	id: string;
+	condition_account: string;
+	condition_operator: string;
+	condition_value: string;
+	action_target: string;
+	action_value: string;
+};
+
+type ConditionTxUpdated = {
+	id: string;
+	condition_account: string;
+	condition_operator: string;
+	condition_value: string;
+};
+
+type ConditionTxCompleted = {
+	id: string;
 };
 
 /**
@@ -37,8 +40,33 @@ export const handleConditionTxsObjects = async (events: SuiEvent[], type: string
 	for (const event of events) {
 		if (!event.type.startsWith(type)) throw new Error('Invalid event module origin');
 		const data = event.parsedJson as ConditionTxEvent;
-		updates[data.conditionTxId].conditions = data.conditions;
-		updates[data.conditionTxId].action = data.action;
+		const isCreationEvent = 'action_target' in data;
+		const isCompletionEvent = !('condition_account' in data);
+
+		if (isCreationEvent) {
+			updates[data.id] = {
+				objectId: data.id,
+				condition: data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16),
+				action: "transfer " + data.action_value + "MIST to " + data.action_target,
+				nextConditionAccount: data.condition_account,
+				actionTarget: data.action_target,
+			};
+			continue;
+		}
+
+		const existing = updates[data.id];
+		if (!existing) {
+			throw new Error('Condition tx not found');
+		}
+		if (isCompletionEvent) {
+			existing.completed = true;
+			existing.condition = "";
+			existing.nextConditionAccount = "";
+			continue;
+		}
+
+		existing.condition = data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16);
+		existing.nextConditionAccount = data.condition_account;
 	}
 
 	//  As part of the demo and to avoid having external dependencies, we use SQLite as our database.

@@ -34,6 +34,11 @@ export const handleStateRootObjects = async (events: SuiEvent[], type: string) =
 		const blockNumberHex = "0x" + BigInt(data.block_number).toString(16);
 		// Handle deletion
 		if (isDeletionEvent) {
+			await prisma.stateRoot.deleteMany({
+				where: {
+					blockNumber: blockNumberHex,
+				},
+			});
 			delete updates[blockNumberHex];
 			continue;
 		}

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useState } from "react";
-import { Button, Dialog, Flex, TextField, Text } from "@radix-ui/themes";
+import { Button, Dialog, Flex, TextField, Text, Select } from "@radix-ui/themes";
 import { useTransactionExecution } from "@/hooks/useTransactionExecution";
 import { createVerifyMPTProofTransaction } from "@/utils/transactions";
 import toast from "react-hot-toast";
@@ -101,11 +101,16 @@ export function RequestProofDialog({ open, onOpenChange }: RequestProofDialogPro
             <Text as="div" size="2" mb="1" weight="bold">
               Ethereum Network
             </Text>
-            <TextField.Root
-              placeholder="e.g., eth-mainnet, eth-sepolia"
+            <Select.Root
               value={ethNetwork}
-              onChange={(e) => setEthNetwork(e.target.value)}
-            />
+              onValueChange={(value) => setEthNetwork(value)}
+            >
+              <Select.Trigger placeholder="Select Ethereum Network" />
+              <Select.Content>
+                <Select.Item value="eth-mainnet">Mainnet</Select.Item>
+                <Select.Item value="eth-sepolia">Sepolia</Select.Item>
+              </Select.Content>
+            </Select.Root>
           </label>
         </Flex>
 

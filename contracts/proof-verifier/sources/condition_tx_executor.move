@@ -9,9 +9,6 @@ module proof_verifier::condition_tx_executor {
     use sui::event;
     use sui::hex;
 
-    /// Define a capability for the admin of the oracle.
-    public struct AdminCap has key, store { id: UID }
-
     /// // Define a one-time witness to create the `Publisher` of the oracle.
     public struct CONDITION_TX_EXECUTOR has drop {}
 
@@ -62,7 +59,6 @@ module proof_verifier::condition_tx_executor {
     fun init(otw: CONDITION_TX_EXECUTOR, ctx: &mut TxContext) {
         package::claim_and_keep(otw, ctx); // Claim ownership of the one-time witness and keep it
 
-        let admin_cap = AdminCap { id: object::new(ctx) }; // Create a new admin capability object
         transfer::share_object(ConditionTxOracle {
             id: object::new(ctx),
             address: ctx.sender(),
@@ -71,7 +67,6 @@ module proof_verifier::condition_tx_executor {
             name: b"ConditionTxOracle".to_string(),
             description: b"A condition tx oracle.".to_string(),
         });
-        transfer::public_transfer(admin_cap, ctx.sender()); // Transfer the admin capability to the sender.
     }
 
     fun push_condition_tx_to_oracle(
@@ -129,7 +124,6 @@ module proof_verifier::condition_tx_executor {
     }
 
     public fun submit_command_with_escrow(
-        _: &AdminCap,
         oracle: &mut ConditionTxOracle,
         list_of_condition_accounts: vector<vector<u8>>,
         list_of_condition_operators: vector<u8>,
@@ -292,8 +286,7 @@ module proof_verifier::condition_tx_executor {
     }
 
     #[test_only]
-    public fun new_for_testing(ctx: &mut TxContext): (AdminCap, ConditionTxOracle) {
-        let cap = AdminCap { id: object::new(ctx) };
+    public fun new_for_testing(ctx: &mut TxContext): ConditionTxOracle {
         let oracle = ConditionTxOracle {
             id: object::new(ctx),
             address: ctx.sender(),
@@ -302,7 +295,7 @@ module proof_verifier::condition_tx_executor {
             name: b"ConditionTxOracle(test)".to_string(),
             description: b"test condition tx oracle".to_string(),
         };
-        (cap, oracle)
+        oracle
     }
 
     #[test_only]
@@ -318,12 +311,6 @@ module proof_verifier::condition_tx_executor {
         let amount: u64 = balance::value(&vault);
         coin::burn_for_testing(coin::from_balance(balance::split(&mut vault, amount), ctx));
         balance::destroy_zero(vault);
-        object::delete(id);
-    }
-
-    #[test_only]
-    public fun destroy_admin_for_testing(cap: AdminCap) {
-        let AdminCap { id } = cap;
         object::delete(id);
     }
 }

@@ -18,7 +18,6 @@ module proof_verifier::mpt_proof_verifier_tests {
     fun test() {
         let mut scenario = ts::begin(@0xA11CE);
         let state_admin;
-        let tx_admin;
         let mut state_oracle;
         let mut tx_oracle;
         let mut mpt_proof_verifier;
@@ -72,7 +71,7 @@ module proof_verifier::mpt_proof_verifier_tests {
 
             // ---- create oracles via test-only factories (no direct struct packing) ----
             (state_admin, state_oracle) = state_root_registry::new_for_testing(ctx);
-            (tx_admin, tx_oracle) = condition_tx_executor::new_for_testing(ctx);
+            tx_oracle = condition_tx_executor::new_for_testing(ctx);
             mpt_proof_verifier = mpt_proof_verifier::new_for_testing(ctx);
 
             // ---- submit state root ----
@@ -104,7 +103,6 @@ module proof_verifier::mpt_proof_verifier_tests {
             vector::push_back(&mut list_of_condition_value, non_zero_expected_balance);
             // ---- submit command ----
             condition_tx_executor::submit_command_with_escrow(
-                &tx_admin,
                 &mut tx_oracle,
                 list_of_condition_account,
                 list_of_condition_operator,
@@ -157,7 +155,6 @@ module proof_verifier::mpt_proof_verifier_tests {
             state_root_registry::destroy_oracle_for_testing(state_oracle);
             state_root_registry::destroy_admin_for_testing(state_admin);
             condition_tx_executor::destroy_oracle_for_testing(tx_oracle, ctx);
-            condition_tx_executor::destroy_admin_for_testing(tx_admin);
             mpt_proof_verifier::destroy_verifier_for_testing(mpt_proof_verifier);
         };
 

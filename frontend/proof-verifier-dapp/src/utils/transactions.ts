@@ -108,8 +108,7 @@ export async function createVerifyMPTProofTransaction(
 export async function createSubmitCommandTransaction(
   conditions: Condition[],
   actionTarget: string,
-  escrowObjectId: string,
-  adminCapObjectId: string
+  escrowValue: string,
 ): Promise<Transaction> {
   const txb = new Transaction();
   const conditionTxOracleObjectId =
@@ -125,16 +124,16 @@ export async function createSubmitCommandTransaction(
   const listOfConditionOperators = conditions.map((c) => OP_MAP[c.operator]);
   const listOfConditionBalances = conditions.map((c) => BigInt(c.balance));
 
+  const escrowCoin = txb.splitCoins(txb.gas, [txb.pure.u64(escrowValue)]);
   txb.moveCall({
     target: `${CONSTANTS.proofVerifierContract.packageId}::condition_tx_executor::submit_command_with_escrow`,
     arguments: [
-      txb.object(adminCapObjectId),
       txb.object(conditionTxOracleObjectId),
       txb.pure.vector("vector<u8>", listOfConditionAccounts),
       txb.pure.vector("u8", listOfConditionOperators),
       txb.pure.vector("u256", listOfConditionBalances),
       txb.pure.address(actionTarget),
-      txb.object(escrowObjectId),
+      escrowCoin,
     ],
   });
 

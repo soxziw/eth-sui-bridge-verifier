@@ -11,19 +11,17 @@ import toast from "react-hot-toast";
 interface SubmitCommandDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  adminCapObjectId?: string;
 }
 
 export function SubmitCommandDialog({ 
   open, 
   onOpenChange,
-  adminCapObjectId 
 }: SubmitCommandDialogProps) {
   const [conditions, setConditions] = useState<Condition[]>([
     { account: "", operator: "EQ" as Operator, balance: "" },
   ]);
   const [actionTarget, setActionTarget] = useState("");
-  const [escrowObjectId, setEscrowObjectId] = useState("");
+  const [escrowValue, setEscrowValue] = useState("");
   const [loading, setLoading] = useState(false);
   
   const executeTransaction = useTransactionExecution();
@@ -53,12 +51,7 @@ export function SubmitCommandDialog({
 
   const handleSubmit = async () => {
     // Validation
-    if (!adminCapObjectId) {
-      toast.error("Admin Cap Object ID is required");
-      return;
-    }
-
-    if (!actionTarget || !escrowObjectId) {
+    if (!actionTarget || !escrowValue) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -76,16 +69,13 @@ export function SubmitCommandDialog({
       const txb = await createSubmitCommandTransaction(
         conditions,
         actionTarget,
-        escrowObjectId,
-        adminCapObjectId
+        escrowValue,
       );
-      
       await executeTransaction(txb);
-      
       // Reset form
       setConditions([{ account: "", operator: "EQ" as Operator, balance: "" }]);
       setActionTarget("");
-      setEscrowObjectId("");
+      setEscrowValue("");
       onOpenChange(false);
     } catch (error: any) {
       toast.error(`Failed to submit command: ${error.message}`);
@@ -193,24 +183,17 @@ export function SubmitCommandDialog({
             />
           </label>
 
-          {/* Escrow Object ID */}
+          {/* Escrow Value */}
           <label>
             <Text as="div" size="2" mb="1" weight="bold">
-              Escrow Object ID *
+              Escrow Value *
             </Text>
             <TextField.Root
-              placeholder="Object ID of the coin to escrow"
-              value={escrowObjectId}
-              onChange={(e) => setEscrowObjectId(e.target.value)}
+              placeholder="e.g., 123"
+              value={escrowValue}
+              onChange={(e) => setEscrowValue(e.target.value)}
             />
           </label>
-
-          {adminCapObjectId && (
-            <div className="p-3 bg-blue-50 rounded">
-              <Text size="2" weight="bold">Admin Cap Object ID:</Text>
-              <Text size="1" className="break-all font-mono">{adminCapObjectId}</Text>
-            </div>
-          )}
         </Flex>
 
         <Flex gap="3" mt="4" justify="end">

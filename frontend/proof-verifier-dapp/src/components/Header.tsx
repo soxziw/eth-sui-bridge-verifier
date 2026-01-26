@@ -5,7 +5,6 @@ import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import { RequestProofDialog } from "./RequestProofDialog";
 import { SubmitCommandDialog } from "./SubmitCommandDialog";
-import { useConditionTxExecutorAdminCapObjects } from "@/admincap/AdminCapOwnedObjects";
 
 const menu = [
   {
@@ -27,11 +26,6 @@ export function Header() {
   const [requestProofOpen, setRequestProofOpen] = useState(false);
   const [submitCommandOpen, setSubmitCommandOpen] = useState(false);
   
-  // Get admin cap objects if wallet is connected
-  const adminCapObjects = useConditionTxExecutorAdminCapObjects();
-  const hasAdminCap = adminCapObjects && adminCapObjects.length > 0;
-  const adminCapObjectId = hasAdminCap ? adminCapObjects[0]?.objectId : undefined;
-
   return (
     <Container>
       <Flex
@@ -69,14 +63,16 @@ export function Header() {
         </Box>
 
         <Box className="flex gap-3 items-center">
-          <Button
-            variant="soft"
-            onClick={() => setRequestProofOpen(true)}
-          >
-            Request Proof
-          </Button>
+          {account && (
+            <Button
+              variant="soft"
+              onClick={() => setRequestProofOpen(true)}
+            >
+              Request Proof
+            </Button>
+          )}
 
-          {account && hasAdminCap && (
+          {account && (
             <Button
               variant="solid"
               color="green"
@@ -98,7 +94,6 @@ export function Header() {
       <SubmitCommandDialog
         open={submitCommandOpen}
         onOpenChange={setSubmitCommandOpen}
-        adminCapObjectId={adminCapObjectId}
       />
     </Container>
   );

@@ -46,17 +46,30 @@ export const handleConditionTxsObjects = async (events: SuiEvent[], type: string
 		if (isCreationEvent) {
 			updates[data.id] = {
 				objectId: data.id,
-				condition: data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16),
+				condition: "0x" + data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16),
 				action: "transfer " + data.action_value + "MIST to " + data.action_target,
-				nextConditionAccount: data.condition_account,
+				nextConditionAccount: "0x" + data.condition_account,
 				actionTarget: data.action_target,
 			};
 			continue;
 		}
 
-		const existing = updates[data.id];
+		let existing = updates[data.id];
 		if (!existing) {
-			throw new Error('Condition tx not found');
+			const dbRow = await prisma.conditionTx.findUnique({
+				where: { objectId: String(data.id) },
+			});
+			if (dbRow) {
+				existing = updates[data.id] = {
+					objectId: dbRow.objectId,
+					condition: dbRow.condition,
+					action: dbRow.action,
+					nextConditionAccount: dbRow.nextConditionAccount,
+					actionTarget: dbRow.actionTarget,
+				};
+			} else {
+				throw new Error('Condition tx not found: ' + data.id);
+			}
 		}
 		if (isCompletionEvent) {
 			existing.completed = true;
@@ -65,8 +78,8 @@ export const handleConditionTxsObjects = async (events: SuiEvent[], type: string
 			continue;
 		}
 
-		existing.condition = data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16);
-		existing.nextConditionAccount = data.condition_account;
+		existing.condition = "0x" + data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16);
+		existing.nextConditionAccount = "0x" + data.condition_account;
 	}
 
 	//  As part of the demo and to avoid having external dependencies, we use SQLite as our database.

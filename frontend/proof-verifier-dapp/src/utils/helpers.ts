@@ -3,12 +3,15 @@
  * e.g. { page: 1, limit: 10 } -> ?page=1&limit=10
  */
 export const constructUrlSearchParams = (
-    object: Record<string, string>,
+    object: Record<string, string | boolean | undefined>,
   ): string => {
     const searchParams = new URLSearchParams();
   
     for (const key in object) {
-      searchParams.set(key, object[key]);
+      const value = object[key];
+      if (value !== undefined) {
+        searchParams.set(key, String(value));
+      }
     }
   
     return `?${searchParams.toString()}`;

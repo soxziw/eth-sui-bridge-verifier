@@ -8,6 +8,7 @@ import { constructUrlSearchParams, getNextPageParam } from "@/utils/helpers";
 import { ApiStateRootObject, StateRootListingQuery } from "@/types/types";
 import { useState } from "react";
 import { TextField } from "@radix-ui/themes";
+import { StateRoot } from "./StateRoot";
 
 /**
  * A component that fetches and displays a list of escrows.
@@ -58,7 +59,7 @@ export function StateRootList({
                 loading={isFetchingNextPage || isLoading}
             >
                 {data?.map((stateRoot: ApiStateRootObject) => (
-                    <StateRoot key={stateRoot.objectId} stateRoot={stateRoot} />
+                    <StateRoot key={stateRoot.blockNumber} stateRoot={stateRoot} />
                 ))}
             </InfiniteScrollArea>
         </div>

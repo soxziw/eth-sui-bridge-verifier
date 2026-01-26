@@ -8,6 +8,7 @@ import { constructUrlSearchParams, getNextPageParam } from "@/utils/helpers";
 import { ApiMPTProofObject, MPTProofListingQuery } from "@/types/types";
 import { useState } from "react";
 import { TextField } from "@radix-ui/themes";
+import { MPTProof } from "./MPTProof";
 
 /**
  * A component that fetches and displays a list of escrows.

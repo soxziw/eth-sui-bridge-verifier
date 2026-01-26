@@ -1,0 +1,126 @@
+// Copyright (c) Mysten Labs, Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+import { useState } from "react";
+import { Button, Dialog, Flex, TextField, Text } from "@radix-ui/themes";
+import { useTransactionExecution } from "@/hooks/useTransactionExecution";
+import { createVerifyMPTProofTransaction } from "@/utils/transactions";
+import toast from "react-hot-toast";
+
+interface RequestProofDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function RequestProofDialog({ open, onOpenChange }: RequestProofDialogProps) {
+  const [blockNumber, setBlockNumber] = useState("");
+  const [account, setAccount] = useState("");
+  const [alchemyApiKey, setAlchemyApiKey] = useState("");
+  const [ethNetwork, setEthNetwork] = useState("eth-mainnet");
+  const [loading, setLoading] = useState(false);
+  
+  const executeTransaction = useTransactionExecution();
+
+  const handleSubmit = async () => {
+    if (!blockNumber || !account) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (!alchemyApiKey) {
+      toast.error("Please provide Alchemy API Key");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const txb = await createVerifyMPTProofTransaction(
+        blockNumber,
+        account,
+        alchemyApiKey,
+        ethNetwork
+      );
+      
+      await executeTransaction(txb);
+      
+      // Reset form
+      setBlockNumber("");
+      setAccount("");
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error(`Failed to verify proof: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content style={{ maxWidth: 500 }}>
+        <Dialog.Title>Request Proof Verification</Dialog.Title>
+        <Dialog.Description size="2" mb="4">
+          Submit a block number and account address to verify the MPT proof.
+        </Dialog.Description>
+
+        <Flex direction="column" gap="3">
+          <label>
+            <Text as="div" size="2" mb="1" weight="bold">
+              Block Number *
+            </Text>
+            <TextField.Root
+              placeholder="e.g., 0x172b8ce"
+              value={blockNumber}
+              onChange={(e) => setBlockNumber(e.target.value)}
+            />
+          </label>
+
+          <label>
+            <Text as="div" size="2" mb="1" weight="bold">
+              Account Address *
+            </Text>
+            <TextField.Root
+              placeholder="e.g., 0x936ab482d6bd111910a42849d3a51ff80bb0a711"
+              value={account}
+              onChange={(e) => setAccount(e.target.value)}
+            />
+          </label>
+
+          <label>
+            <Text as="div" size="2" mb="1" weight="bold">
+              Alchemy API Key *
+            </Text>
+            <TextField.Root
+              type="password"
+              placeholder="Your Alchemy API Key"
+              value={alchemyApiKey}
+              onChange={(e) => setAlchemyApiKey(e.target.value)}
+            />
+          </label>
+
+          <label>
+            <Text as="div" size="2" mb="1" weight="bold">
+              Ethereum Network
+            </Text>
+            <TextField.Root
+              placeholder="e.g., eth-mainnet, eth-sepolia"
+              value={ethNetwork}
+              onChange={(e) => setEthNetwork(e.target.value)}
+            />
+          </label>
+        </Flex>
+
+        <Flex gap="3" mt="4" justify="end">
+          <Dialog.Close>
+            <Button variant="soft" color="gray">
+              Cancel
+            </Button>
+          </Dialog.Close>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Submitting..." : "Verify Proof"}
+          </Button>
+        </Flex>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+}
+

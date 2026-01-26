@@ -9,4 +9,8 @@ export default defineConfig({
       "@": "/src",
     },
   },
+  cacheDir: "/tmp/.vite",
+  optimizeDeps: {
+    force: true,
+  },
 });

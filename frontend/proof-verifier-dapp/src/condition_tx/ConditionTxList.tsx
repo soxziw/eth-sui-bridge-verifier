@@ -8,6 +8,7 @@ import { constructUrlSearchParams, getNextPageParam } from "@/utils/helpers";
 import { ApiConditionTxObject, ConditionTxListingQuery } from "@/types/types";
 import { useState } from "react";
 import { TextField } from "@radix-ui/themes";
+import { ConditionTx } from "./ConditionTx";
 
 /**
  * A component that fetches and displays a list of escrows.

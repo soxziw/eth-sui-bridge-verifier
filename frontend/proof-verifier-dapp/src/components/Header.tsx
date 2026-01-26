@@ -1,7 +1,11 @@
-import { ConnectButton } from "@mysten/dapp-kit";
+import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
 import { SizeIcon } from "@radix-ui/react-icons";
-import { Box, Container, Flex, Heading } from "@radix-ui/themes";
+import { Box, Container, Flex, Heading, Button } from "@radix-ui/themes";
 import { NavLink } from "react-router-dom";
+import { useState } from "react";
+import { RequestProofDialog } from "./RequestProofDialog";
+import { SubmitCommandDialog } from "./SubmitCommandDialog";
+import { useConditionTxExecutorAdminCapObjects } from "@/admincap/AdminCapOwnedObjects";
 
 const menu = [
   {
@@ -19,6 +23,15 @@ const menu = [
 ];
 
 export function Header() {
+  const account = useCurrentAccount();
+  const [requestProofOpen, setRequestProofOpen] = useState(false);
+  const [submitCommandOpen, setSubmitCommandOpen] = useState(false);
+  
+  // Get admin cap objects if wallet is connected
+  const adminCapObjects = useConditionTxExecutorAdminCapObjects();
+  const hasAdminCap = adminCapObjects && adminCapObjects.length > 0;
+  const adminCapObjectId = hasAdminCap ? adminCapObjects[0]?.objectId : undefined;
+
   return (
     <Container>
       <Flex
@@ -26,7 +39,7 @@ export function Header() {
         px="4"
         py="2"
         justify="between"
-        className="border-b flex flex-wrap"
+        className="border-b flex flex-wrap gap-4"
       >
         <Box>
           <Heading className="flex items-center gap-3">
@@ -55,10 +68,38 @@ export function Header() {
           ))}
         </Box>
 
-        <Box className="connect-wallet-wrapper">
+        <Box className="flex gap-3 items-center">
+          <Button
+            variant="soft"
+            onClick={() => setRequestProofOpen(true)}
+          >
+            Request Proof
+          </Button>
+
+          {account && hasAdminCap && (
+            <Button
+              variant="solid"
+              color="green"
+              onClick={() => setSubmitCommandOpen(true)}
+            >
+              Submit Command
+            </Button>
+          )}
+
           <ConnectButton />
         </Box>
       </Flex>
+
+      <RequestProofDialog
+        open={requestProofOpen}
+        onOpenChange={setRequestProofOpen}
+      />
+
+      <SubmitCommandDialog
+        open={submitCommandOpen}
+        onOpenChange={setSubmitCommandOpen}
+        adminCapObjectId={adminCapObjectId}
+      />
     </Container>
   );
 }

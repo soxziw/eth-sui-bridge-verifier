@@ -14,7 +14,7 @@ import { TextField } from "@radix-ui/themes";
  * It works by using the API to fetch them, and can be re-used with different
  * API params, as well as an optional search by escrow ID functionality.
  */
-export function EscrowList({
+export function ConditionTxList({
   params,
   enableSearch,
 }: {

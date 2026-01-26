@@ -186,7 +186,7 @@ export function SubmitCommandDialog({
           {/* Escrow Value */}
           <label>
             <Text as="div" size="2" mb="1" weight="bold">
-              Escrow Value *
+              Escrow Value (MIST)*
             </Text>
             <TextField.Root
               placeholder="e.g., 123"

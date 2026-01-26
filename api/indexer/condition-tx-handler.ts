@@ -46,8 +46,8 @@ export const handleConditionTxsObjects = async (events: SuiEvent[], type: string
 		if (isCreationEvent) {
 			updates[data.id] = {
 				objectId: data.id,
-				condition: "0x" + data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16),
-				action: "transfer " + data.action_value + "MIST to " + data.action_target,
+				condition: "0x" + data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16) + " Wei",
+				action: "transfer " + data.action_value + " MIST to " + data.action_target,
 				nextConditionAccount: "0x" + data.condition_account,
 				actionTarget: data.action_target,
 			};

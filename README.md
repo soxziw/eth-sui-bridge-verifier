@@ -2,7 +2,7 @@
 
 A decentralized cross-chain oracle system that verifies Ethereum account states on Sui blockchain and executes conditional transactions based on verified Ethereum account balances.
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -44,7 +44,7 @@ A decentralized cross-chain oracle system that verifies Ethereum account states 
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## 🎯 Key Features
+## Key Features
 
 - **Cross-chain State Verification**: Verify Ethereum account states on Sui using Merkle Patricia Trie (MPT) proofs
 - **Conditional Execution**: Execute transactions on Sui based on Ethereum account balances
@@ -54,7 +54,7 @@ A decentralized cross-chain oracle system that verifies Ethereum account states 
 
 ---
 
-## 📜 Smart Contracts (Move Modules)
+## Smart Contracts (Move Modules)
 
 Located in: `contracts/proof-verifier/sources/`
 
@@ -197,7 +197,7 @@ public(package) fun submit_verified_account(
 
 ---
 
-## 🔍 Indexer
+## Indexer
 
 Located in: `api/indexer/`
 
@@ -252,7 +252,7 @@ const EVENTS_TO_TRACK = [
 
 ---
 
-## 🌐 API Server
+## API Server
 
 Located in: `api/server.ts`
 
@@ -361,7 +361,7 @@ model Cursor {
 
 ---
 
-## 🎨 Frontend dApp
+## Frontend dApp
 
 Located in: `frontend/proof-verifier-dapp/`
 
@@ -429,7 +429,7 @@ async function createSubmitCommandTransaction(
 
 ---
 
-## 🔬 Comparison with Other Systems
+## Comparison with Other Systems
 
 ### vs. NEAR Protocol
 
@@ -517,13 +517,65 @@ async function createSubmitCommandTransaction(
 
 ---
 
-## 🚀 Setup & Deployment
+## Setup & Deployment
 
 ### Prerequisites
 - Node.js 20+
 - pnpm
 - Sui CLI
 - Alchemy API key (for Ethereum state access)
+
+### Demo
+
+> Make sure you have enough Testnet (or any net) SUI in the active address of the CLI.
+
+There are some helper functions to:
+
+1. Publish the smart contract
+2. Create some demo state roots
+
+To produce demo data:
+
+1. Publish the smart contract by running
+
+```bash
+# Under api/
+npx ts-node helpers/publish-contracts.ts
+```
+
+2. Deploy state root registry service
+
+```bash
+# Under api/
+npx ts-node helpers/register-state-roots.ts
+```
+
+2. Produce demo state roots
+
+```bash
+# Under api/
+npx ts-node helpers/create-demo-data.ts
+```
+
+3. Run API server and indexer
+
+```bash
+# Under api/
+pnpm dev
+```
+
+4. Run Frontend
+```bash
+# Under frontend/proof-verifier-dapp/
+pnpm dev
+```
+
+If you want to reset the database (start from scratch), run:
+
+```bash
+# Under api/
+pnpm db:reset:dev && pnpm db:setup:dev
+```
 
 ### Smart Contracts
 
@@ -575,7 +627,7 @@ Update `src/constants.ts` with:
 
 ---
 
-## 🔐 Security Considerations
+## Security Considerations
 
 1. **Trusted Oracle**: State roots must be submitted by AdminCap holder - requires trust
 2. **MPT Proof Validity**: Only as secure as the state root source
@@ -586,7 +638,7 @@ Update `src/constants.ts` with:
 
 ---
 
-## 📊 Use Cases
+## Use Cases
 
 1. **Conditional Airdrops**: Send SUI to users when their ETH balance exceeds threshold
 2. **Cross-chain Incentives**: Reward users for maintaining liquidity on Ethereum
@@ -596,7 +648,7 @@ Update `src/constants.ts` with:
 
 ---
 
-## 📚 References
+## References
 
 - [Sui Move Documentation](https://docs.sui.io/guides/developer/sui-101)
 - [Ethereum MPT Specification](https://ethereum.org/en/developers/docs/data-structures-and-encoding/patricia-merkle-trie/)
@@ -606,13 +658,13 @@ Update `src/constants.ts` with:
 
 ---
 
-## 📄 License
+## License
 
 Apache-2.0
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions welcome! Please ensure:
 - Smart contract changes include tests
@@ -621,6 +673,3 @@ Contributions welcome! Please ensure:
 - Follow existing code style and conventions
 
 ---
-
-**Built with ❤️ using Sui Move, TypeScript, and React**
-

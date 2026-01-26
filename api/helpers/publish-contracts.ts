@@ -9,7 +9,7 @@ import { publishPackage } from '../sui-utils';
 /// We're publishing both as part of our demo.
 (async () => {
 	await publishPackage({
-		packagePath: __dirname + '/../../contracts/proof_verifier',
+		packagePath: __dirname + '/../../contracts/proof-verifier',
 		network: 'testnet',
 		exportFileName: 'proof-verifier-contract',
 	});

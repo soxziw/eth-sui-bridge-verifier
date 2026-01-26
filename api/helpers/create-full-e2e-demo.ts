@@ -78,12 +78,8 @@ const OP_MAP: Record<Operator, number> = {
 };
 const submitCommandWithEscrow = async (conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinValue: string) => {
 	const txb = new Transaction();
-    const conditionTxAdminCap = await getOwnedObjects('condition_tx_executor', 'AdminCap');
-
-    if (!conditionTxAdminCap || !conditionTxAdminCap[0]) throw new Error('Condition tx admin cap not found');
-    const conditionTxAdminCapObjectId = conditionTxAdminCap[0].objectId;
     const conditionTxOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.conditionTxOracleId;
-    if (!conditionTxAdminCapObjectId || !conditionTxOracleObjectId) throw new Error('Condition tx admin cap or oracle object id not found');
+    if (!conditionTxOracleObjectId) throw new Error('Condition tx oracle object id not found');
 
 
     const listOfConditionAccounts = conditions.map(([account, _, __]) => hexToNumberArray(account));
@@ -94,7 +90,6 @@ const submitCommandWithEscrow = async (conditions: [account: string, operator: s
     txb.moveCall({
         target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::condition_tx_executor::submit_command_with_escrow`,
         arguments: [
-            txb.object(conditionTxAdminCapObjectId),
             txb.object(conditionTxOracleObjectId),
             txb.pure.vector('vector<u8>', listOfConditionAccounts),
             txb.pure.vector('u8', listOfConditionOperators),

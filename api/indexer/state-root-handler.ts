@@ -9,7 +9,7 @@ type StateRootEvent = StateRootCreatedOrUpdated | StateRootDeleted;
 
 type StateRootCreatedOrUpdated = {
 	block_number: string;
-	stateRoot: string;
+	state_root: string;
 };
 
 type StateRootDeleted = {
@@ -29,7 +29,7 @@ export const handleStateRootObjects = async (events: SuiEvent[], type: string) =
 	for (const event of events) {
 		if (!event.type.startsWith(type)) throw new Error('Invalid event module origin');
 		const data = event.parsedJson as StateRootEvent;
-		const isDeletionEvent = !('stateRoot' in data);
+		const isDeletionEvent = !('state_root' in data);
 
 		const blockNumberHex = "0x" + BigInt(data.block_number).toString(16);
 		// Handle deletion
@@ -40,12 +40,12 @@ export const handleStateRootObjects = async (events: SuiEvent[], type: string) =
 
 		// Handle creation or update event
 		if (updates[blockNumberHex]) {
-			updates[blockNumberHex].stateRoot = data.stateRoot;
+			updates[blockNumberHex].stateRoot = "0x" + data.state_root;
 			continue;
 		}
 		updates[blockNumberHex] = {
 			blockNumber: blockNumberHex,
-			stateRoot: data.stateRoot,
+			stateRoot: "0x" + data.state_root,
 		};
 	}
 

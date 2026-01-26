@@ -6,7 +6,6 @@ export enum QueryKey {
   StateRoots = "state-roots",
   ConditionTxs = "condition-txs",
   MPTProofs = "mpt-proofs",
-  GetOwnedObjects = "getOwnedObjects",
 }
 
 export const CONSTANTS = {

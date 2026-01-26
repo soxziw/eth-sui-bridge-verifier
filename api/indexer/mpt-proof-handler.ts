@@ -30,7 +30,7 @@ export const handleMPTProofsObjects = async (events: SuiEvent[], type: string) =
         updates[data.id] = {
             objectId: data.id,
             blockNumber: "0x" + BigInt(data.block_number).toString(16),
-            account: data.account,
+            account: "0x" + data.account,
             balance: "0x" + BigInt(data.balance).toString(16),
         };
 	}

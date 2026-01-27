@@ -16,7 +16,7 @@ export function RequestProofDialog({ open, onOpenChange }: RequestProofDialogPro
   const [blockNumber, setBlockNumber] = useState("");
   const [account, setAccount] = useState("");
   const [alchemyApiKey, setAlchemyApiKey] = useState("");
-  const [ethNetwork, setEthNetwork] = useState("eth-mainnet");
+  const [ethNetwork, setEthNetwork] = useState("eth-sepolia");
   const [loading, setLoading] = useState(false);
   
   const executeTransaction = useTransactionExecution();

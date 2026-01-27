@@ -36,7 +36,30 @@ function hexToNumberArray(hex: string): number[] {
     return Array.from(Buffer.from(h, "hex"));
 }
 
-const submitStateRoots = async (stateRoots: [blockNumber: string, stateRoot: string][]) => {
+const submitStateRoots = async (blockNumbers: string[]) => {
+    let stateRoots: string[] = [];
+    for (const blockNumber of blockNumbers) {
+        // eth_getBlockByNumber (POST /:apiKey)
+        const response = await fetch(`https://${process.env.ETH_NETWORK}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                "jsonrpc": "2.0",
+                "method": "eth_getBlockByNumber",
+                "params": [
+                    blockNumber,
+                    false
+                ],
+                "id": 1
+            }),
+        });
+        const body = await response.json();
+        // console.log(body);
+        stateRoots.push(body.result.stateRoot);
+    }
+
 	const txb = new Transaction();
     const stateRootAdminCap = await getOwnedObjects('state_root_registry', 'AdminCap');
 
@@ -45,8 +68,8 @@ const submitStateRoots = async (stateRoots: [blockNumber: string, stateRoot: str
     const stateRootOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.stateRootOracleId;
     if (!stateRootAdminCapObjectId || !stateRootOracleObjectId) throw new Error('State root admin cap or oracle object id not found');
 
-    const listOfBlockNumbers = stateRoots.map(([blockNumber, _]) => BigInt(blockNumber));
-    const listOfStateRoots = stateRoots.map(([_, stateRoot]) => hexToNumberArray(stateRoot));
+    const listOfBlockNumbers = blockNumbers.map((blockNumber) => BigInt(blockNumber));
+    const listOfStateRoots = stateRoots.map((stateRoot) => hexToNumberArray(stateRoot));
 
     txb.moveCall({
         target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::state_root_registry::submit_state_roots`,
@@ -66,21 +89,10 @@ const submitStateRoots = async (stateRoots: [blockNumber: string, stateRoot: str
     console.log('Successfully created state roots.');
 };
 
-const zeroBlockNumber = '0x172b8ce';
-const zeroStateRoot = '0xcb07c9b25d3070b7567fe0f9d7d5cb7600d910a20adc307fd1897ad55139d07c';
-const zeroAccount = '0x936ab482d6bd111910a42849d3a51ff80bb0a711';
-
-const nonZeroBlockNumber = '0x17159f1';
-const nonZeroStateRoot = '0xf2fbda72af80ff49713383cb988697dcfabc880832eb91fafbf7e79257846a25';
-const nonZeroAccount = '0x6c8f2a135f6ed072de4503bd7c4999a1a17f824b';
-
-const receiver = '0x08866b897d05fc1fc955248612f09e30f9684da753765272735df63a6490a8d9';
-const escrowCoinValue = '123';
+const Condition1BlockNumber = '0x9a9a20';
+const Condition2BlockNumber = '0x9a9b05';
 
 async function main() {
-    await submitStateRoots([
-        [zeroBlockNumber, zeroStateRoot],
-        [nonZeroBlockNumber, nonZeroStateRoot],
-    ]);
+    await submitStateRoots([Condition1BlockNumber, Condition2BlockNumber]);
 }
 main().catch(console.error);

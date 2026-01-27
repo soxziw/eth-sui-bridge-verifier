@@ -21,6 +21,7 @@ module proof_verifier::mpt_proof_verifier_tests {
         let mut state_oracle;
         let mut tx_oracle;
         let mut mpt_proof_verifier;
+        let start_block_number = 0x9a9a00;
         let receiver: address = @0xB0B;
         let escrow_value: u64 = 123;
         {
@@ -102,6 +103,7 @@ module proof_verifier::mpt_proof_verifier_tests {
             // ---- submit command ----
             condition_tx_executor::submit_command_with_escrow(
                 &mut tx_oracle,
+                start_block_number,
                 list_of_condition_account,
                 list_of_condition_operator,
                 list_of_condition_value,

@@ -39,8 +39,37 @@ export async function createVerifyMPTProofTransaction(
   alchemyApiKey: string,
   ethNetwork: string
 ): Promise<Transaction> {
+  // Fetch finalized block from Alchemy
+  const finalizedBlockResponse = await fetch(
+    `https://${ethNetwork}.g.alchemy.com/v2/${alchemyApiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getBlockByNumber",
+        params: ["finalized", false],
+        id: 1,
+      }),
+    }
+  );
+
+  const finalizedBlockBody = await finalizedBlockResponse.json();
+
+  if (finalizedBlockBody.error) {
+    throw new Error(`Failed to fetch finalized block: ${finalizedBlockBody.error.message}`);
+  }
+
+  const finalizedBlockNumber = finalizedBlockBody.result.number;
+
+  if (blockNumber > finalizedBlockNumber) {
+    throw new Error("Block number is greater than finalized block");
+  }
+
   // Fetch proof from Alchemy
-  const response = await fetch(
+  const proofResponse = await fetch(
     `https://${ethNetwork}.g.alchemy.com/v2/${alchemyApiKey}`,
     {
       method: "POST",
@@ -56,10 +85,10 @@ export async function createVerifyMPTProofTransaction(
     }
   );
 
-  const body = await response.json();
+  const proofBody = await proofResponse.json();
 
-  if (body.error) {
-    throw new Error(`Failed to fetch proof: ${body.error.message}`);
+  if (proofBody.error) {
+    throw new Error(`Failed to fetch proof: ${proofBody.error.message}`);
   }
 
   const txb = new Transaction();
@@ -90,12 +119,12 @@ export async function createVerifyMPTProofTransaction(
       txb.pure.vector("u8", hexToNumberArray(account)),
       txb.pure.vector(
         "vector<u8>",
-        body.result.accountProof.map((x: string) => hexToNumberArray(x))
+        proofBody.result.accountProof.map((x: string) => hexToNumberArray(x))
       ),
-      txb.pure.u256(BigInt(body.result.nonce)),
-      txb.pure.u256(BigInt(body.result.balance)),
-      txb.pure.vector("u8", hexToNumberArray(body.result.storageHash)),
-      txb.pure.vector("u8", hexToNumberArray(body.result.codeHash)),
+      txb.pure.u256(BigInt(proofBody.result.nonce)),
+      txb.pure.u256(BigInt(proofBody.result.balance)),
+      txb.pure.vector("u8", hexToNumberArray(proofBody.result.storageHash)),
+      txb.pure.vector("u8", hexToNumberArray(proofBody.result.codeHash)),
     ],
   });
 
@@ -106,10 +135,66 @@ export async function createVerifyMPTProofTransaction(
  * Creates a transaction to submit a command with escrow
  */
 export async function createSubmitCommandTransaction(
+  startBlock: string,
   conditions: Condition[],
   actionTarget: string,
   escrowValue: string,
+  alchemyApiKey: string,
+  ethNetwork: string
 ): Promise<Transaction> {
+  // Fetch start block from Alchemy
+  const startBlockResponse = await fetch(
+    `https://${ethNetwork}.g.alchemy.com/v2/${alchemyApiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getBlockByNumber",
+        params: [startBlock, false],
+        id: 1,
+      }),
+    }
+  );
+
+  const startBlockBody = await startBlockResponse.json();
+
+  if (startBlockBody.error) {
+    throw new Error(`Failed to fetch start block: ${startBlockBody.error.message}`);
+  }
+
+  // Fetch finalized block from Alchemy
+  const finalizedBlockResponse = await fetch(
+    `https://${ethNetwork}.g.alchemy.com/v2/${alchemyApiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getBlockByNumber",
+        params: ["finalized", false],
+        id: 1,
+      }),
+    }
+  );
+
+  const finalizedBlockBody = await finalizedBlockResponse.json();
+
+  if (finalizedBlockBody.error) {
+    throw new Error(`Failed to fetch finalized block: ${finalizedBlockBody.error.message}`);
+  }
+
+  const startBlockNumber = startBlockBody.result.number;
+  const finalizedBlockNumber = finalizedBlockBody.result.number;
+
+  if (startBlockNumber > finalizedBlockNumber) {
+    throw new Error("Start block is greater than finalized block");
+  }
+
   const txb = new Transaction();
   const conditionTxOracleObjectId =
     CONSTANTS.proofVerifierContract.conditionTxOracleId;
@@ -129,6 +214,7 @@ export async function createSubmitCommandTransaction(
     target: `${CONSTANTS.proofVerifierContract.packageId}::condition_tx_executor::submit_command_with_escrow`,
     arguments: [
       txb.object(conditionTxOracleObjectId),
+      txb.pure.u64(BigInt(startBlockNumber)),
       txb.pure.vector("vector<u8>", listOfConditionAccounts),
       txb.pure.vector("u8", listOfConditionOperators),
       txb.pure.vector("u256", listOfConditionBalances),

@@ -9,6 +9,7 @@ type ConditionTxEvent = ConditionTxCreated | ConditionTxUpdated | ConditionTxCom
 
 type ConditionTxCreated = {
 	id: string;
+	after_block_number: string;
 	condition_account: string;
 	condition_operator: string;
 	condition_value: string;
@@ -18,6 +19,7 @@ type ConditionTxCreated = {
 
 type ConditionTxUpdated = {
 	id: string;
+	after_block_number: string;
 	condition_account: string;
 	condition_operator: string;
 	condition_value: string;
@@ -46,8 +48,8 @@ export const handleConditionTxsObjects = async (events: SuiEvent[], type: string
 		if (isCreationEvent) {
 			updates[data.id] = {
 				objectId: data.id,
-				condition: "0x" + data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16) + " Wei",
-				action: "transfer " + data.action_value + " MIST to " + data.action_target,
+				condition: "After block 0x" + BigInt(data.after_block_number).toString(16) + ", 0x" + data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16) + " Wei",
+				action: "Transfer " + data.action_value + " MIST to " + data.action_target,
 				nextConditionAccount: "0x" + data.condition_account,
 				actionTarget: data.action_target,
 			};
@@ -78,7 +80,7 @@ export const handleConditionTxsObjects = async (events: SuiEvent[], type: string
 			continue;
 		}
 
-		existing.condition = "0x" + data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16);
+		existing.condition = "After block 0x" + BigInt(data.after_block_number).toString(16) + ", 0x" + data.condition_account + ".balance " + data.condition_operator + " " + "0x" + BigInt(data.condition_value).toString(16);
 		existing.nextConditionAccount = "0x" + data.condition_account;
 	}
 

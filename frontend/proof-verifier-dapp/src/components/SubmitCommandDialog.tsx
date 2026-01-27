@@ -17,11 +17,14 @@ export function SubmitCommandDialog({
   open, 
   onOpenChange,
 }: SubmitCommandDialogProps) {
+  const [startBlock, setStartBlock] = useState("");
   const [conditions, setConditions] = useState<Condition[]>([
     { account: "", operator: "EQ" as Operator, balance: "" },
   ]);
   const [actionTarget, setActionTarget] = useState("");
   const [escrowValue, setEscrowValue] = useState("");
+  const [alchemyApiKey, setAlchemyApiKey] = useState("");
+  const [ethNetwork, setEthNetwork] = useState("eth-sepolia");
   const [loading, setLoading] = useState(false);
   
   const executeTransaction = useTransactionExecution();
@@ -51,7 +54,7 @@ export function SubmitCommandDialog({
 
   const handleSubmit = async () => {
     // Validation
-    if (!actionTarget || !escrowValue) {
+    if (!startBlock || !actionTarget || !escrowValue) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -64,12 +67,20 @@ export function SubmitCommandDialog({
       return;
     }
 
+    if (!alchemyApiKey) {
+      toast.error("Please provide Alchemy API Key");
+      return;
+    }
+    
     setLoading(true);
     try {
       const txb = await createSubmitCommandTransaction(
+        startBlock,
         conditions,
         actionTarget,
         escrowValue,
+        alchemyApiKey,
+        ethNetwork,
       );
       await executeTransaction(txb);
       // Reset form
@@ -93,6 +104,18 @@ export function SubmitCommandDialog({
         </Dialog.Description>
 
         <Flex direction="column" gap="4">
+          {/* Start Block */}
+          <label>
+            <Text as="div" size="2" mb="1" weight="bold">
+              Start Block *
+            </Text>
+            <TextField.Root
+              placeholder="e.g., 0x9a9a00 or finalized"
+              value={startBlock}
+              onChange={(e) => setStartBlock(e.target.value)}
+            />
+          </label>
+
           {/* Conditions */}
           <div>
             <Flex justify="between" align="center" mb="2">
@@ -186,13 +209,43 @@ export function SubmitCommandDialog({
           {/* Escrow Value */}
           <label>
             <Text as="div" size="2" mb="1" weight="bold">
-              Escrow Value (MIST)*
+              Escrow Value (MIST) *
             </Text>
             <TextField.Root
               placeholder="e.g., 123"
               value={escrowValue}
               onChange={(e) => setEscrowValue(e.target.value)}
             />
+          </label>
+
+          {/* Alchemy API Key */}
+          <label>
+            <Text as="div" size="2" mb="1" weight="bold">
+              Alchemy API Key *
+            </Text>
+            <TextField.Root
+              type="password"
+              placeholder="Your Alchemy API Key"
+              value={alchemyApiKey}
+              onChange={(e) => setAlchemyApiKey(e.target.value)}
+            />
+          </label>
+
+          {/* Ethereum Network */}
+          <label>
+            <Text as="div" size="2" mb="1" weight="bold">
+              Ethereum Network
+            </Text>
+            <Select.Root
+              value={ethNetwork}
+              onValueChange={(value) => setEthNetwork(value)}
+            >
+              <Select.Trigger placeholder="Select Ethereum Network" />
+              <Select.Content>
+                <Select.Item value="eth-mainnet">Mainnet</Select.Item>
+                <Select.Item value="eth-sepolia">Sepolia</Select.Item>
+              </Select.Content>
+            </Select.Root>
           </label>
         </Flex>
 

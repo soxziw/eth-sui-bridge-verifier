@@ -46,6 +46,7 @@ module proof_verifier::condition_tx_executor {
 
     public struct ConditionTx has copy, drop, store {
         id: u256,
+        after_block_number: u64,
         list_of_conditions: vector<Condition>,
         action: TxAction,
     }
@@ -90,6 +91,7 @@ module proof_verifier::condition_tx_executor {
     ) {
         event::emit(ConditionTxCreated {
             id: condition_tx.id,
+            after_block_number: condition_tx.after_block_number,
             condition_account: string::utf8(hex::encode(condition_tx.list_of_conditions[0].account)),
             condition_operator: match (condition_tx.list_of_conditions[0].operator) {
                 Operator::GT => string::utf8(b"GT"),
@@ -110,6 +112,7 @@ module proof_verifier::condition_tx_executor {
     ) {
         event::emit(ConditionTxUpdated {
             id: condition_tx.id,
+            after_block_number: condition_tx.after_block_number,
             condition_account: string::utf8(hex::encode(condition_tx.list_of_conditions[0].account)),
             condition_operator: match (condition_tx.list_of_conditions[0].operator) {
                 Operator::GT => string::utf8(b"GT"),
@@ -125,6 +128,7 @@ module proof_verifier::condition_tx_executor {
 
     public fun submit_command_with_escrow(
         oracle: &mut ConditionTxOracle,
+        after_block_number: u64,
         list_of_condition_accounts: vector<vector<u8>>,
         list_of_condition_operators: vector<u8>,
         list_of_condition_values: vector<u256>,
@@ -158,6 +162,7 @@ module proof_verifier::condition_tx_executor {
 
         let condition_tx = ConditionTx {
             id: oracle.next_condition_tx_id,
+            after_block_number: after_block_number,
             list_of_conditions,
             action: TxAction { recipient: action_target, amount: coin::value(&action_escrow)},
         };
@@ -168,6 +173,8 @@ module proof_verifier::condition_tx_executor {
     }
 
     fun meets_condition(
+        block_number: u64,
+        after_block_number: u64,
         balance: u256,
         condition: &Condition
     ): bool {
@@ -178,11 +185,12 @@ module proof_verifier::condition_tx_executor {
             Operator::LTE => balance <= condition.value,
             Operator::EQ => balance == condition.value,
             Operator::NEQ => balance != condition.value,
-        }
+        } && block_number > after_block_number
     }
 
     public(package) fun submit_verified_account(
         oracle: &mut ConditionTxOracle,
+        block_number: u64,
         account: vector<u8>,
         balance: u256,
         ctx: &mut TxContext
@@ -196,7 +204,7 @@ module proof_verifier::condition_tx_executor {
                 while (i < vector::length(&account_condition_tx_oracle.list_of_condition_tx)) {
                     let condition_tx = account_condition_tx_oracle.list_of_condition_tx[i];
                     let condition = condition_tx.list_of_conditions[0];
-                    let condition_met = meets_condition(balance, &condition);
+                    let condition_met = meets_condition(block_number, condition_tx.after_block_number, balance, &condition);
                     if (condition_met) {
                         if (vector::length(&condition_tx.list_of_conditions) == 1) {
                             let action = condition_tx.action;
@@ -213,6 +221,7 @@ module proof_verifier::condition_tx_executor {
                             };
                             let new_condition_tx = ConditionTx {
                                 id: condition_tx.id,
+                                after_block_number: block_number,
                                 list_of_conditions: new_list_of_conditions,
                                 action: condition_tx.action,
                             };
@@ -267,6 +276,7 @@ module proof_verifier::condition_tx_executor {
 
     public struct ConditionTxCreated has copy, drop {
         id: u256,
+        after_block_number: u64,
         condition_account: String,
         condition_operator: String,
         condition_value: u256,
@@ -276,6 +286,7 @@ module proof_verifier::condition_tx_executor {
 
     public struct ConditionTxUpdated has copy, drop {
         id: u256,
+        after_block_number: u64,
         condition_account: String,
         condition_operator: String,
         condition_value: u256,

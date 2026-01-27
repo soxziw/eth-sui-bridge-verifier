@@ -99,7 +99,7 @@ const OP_MAP: Record<Operator, number> = {
   EQ: 4,
   NEQ: 5,
 };
-const submitCommandWithEscrow = async (conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinValue: string) => {
+const submitCommandWithEscrow = async (startBlockNumber: string, conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinValue: string) => {
 	const txb = new Transaction();
     const conditionTxOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.conditionTxOracleId;
     if (!conditionTxOracleObjectId) throw new Error('Condition tx oracle object id not found');
@@ -114,6 +114,7 @@ const submitCommandWithEscrow = async (conditions: [account: string, operator: s
         target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::condition_tx_executor::submit_command_with_escrow`,
         arguments: [
             txb.object(conditionTxOracleObjectId),
+            txb.pure.u64(BigInt(startBlockNumber)),
             txb.pure.vector('vector<u8>', listOfConditionAccounts),
             txb.pure.vector('u8', listOfConditionOperators),
             txb.pure.vector('u256', listOfConditionBalances),
@@ -186,6 +187,8 @@ const verifyMPTProof = async (blockNumber: string, account: string) => {
     console.log('Successfully verified MPT proof.');
 }
 
+const StartBlockNumber = '0x9a9a00';
+
 const Condition1BlockNumber = '0x9a9a20';
 const Condition1Account = '0xded4e253d606d27daee949b862e7a18645cda442';
 
@@ -199,6 +202,7 @@ async function main() {
     await submitStateRoots([Condition1BlockNumber, Condition2BlockNumber]);
 
     await submitCommandWithEscrow(
+        StartBlockNumber,
         [
             [Condition1Account, 'LTE', '0xb1a2bc2ec50000'],
             [Condition2Account, 'GTE', '0x213b3b464cd0000'],

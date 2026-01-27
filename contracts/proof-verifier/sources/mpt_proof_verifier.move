@@ -96,6 +96,7 @@ module proof_verifier::mpt_proof_verifier {
 
         condition_tx_executor::submit_verified_account(
             condition_tx_oracle,
+            block_number,
             account,
             expected_balance,
             ctx

@@ -89,7 +89,7 @@ const submitStateRoots = async (blockNumbers: string[]) => {
     console.log('Successfully created state roots.');
 };
 
-type Operator = 'GT' | 'GTE' | 'LT' | 'LTE' | 'EQ' | 'NEQ';
+type Operator = 'GT' | 'GTE' | 'LT' | 'LTE' | 'EQ' | 'NEQ' | 'FI' | 'PI';
 
 const OP_MAP: Record<Operator, number> = {
   GT: 0,
@@ -98,8 +98,10 @@ const OP_MAP: Record<Operator, number> = {
   LTE: 3,
   EQ: 4,
   NEQ: 5,
+  FI: 6,
+  PI: 8,
 };
-const submitCommandWithEscrow = async (conditionTxId: string, startBlockNumber: string, conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinValue: string) => {
+const submitCommandWithEscrow = async (startBlockNumber: string, conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinValue: string) => {
 	const txb = new Transaction();
     const conditionTxOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.conditionTxOracleId;
     if (!conditionTxOracleObjectId) throw new Error('Condition tx oracle object id not found');
@@ -114,7 +116,6 @@ const submitCommandWithEscrow = async (conditionTxId: string, startBlockNumber: 
         target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::condition_tx_executor::submit_command_with_escrow`,
         arguments: [
             txb.object(conditionTxOracleObjectId),
-            txb.pure.u256(BigInt(conditionTxId)),
             txb.pure.u64(BigInt(startBlockNumber)),
             txb.pure.vector('vector<u8>', listOfConditionAccounts),
             txb.pure.vector('u8', listOfConditionOperators),
@@ -132,7 +133,35 @@ const submitCommandWithEscrow = async (conditionTxId: string, startBlockNumber: 
     console.log('Successfully submitted command with escrow.');
 };
 
-const verifyMPTProof = async (blockNumber: string, account: string) => {
+const submitTransferCommandWithEscrow = async (startBlockNumber: string, transferAccount: string, transferOperator: string, expectedTransferAmount: string, actionTarget: string, escrowCoinValue: string) => {
+	const txb = new Transaction();
+    const conditionTxOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.conditionTxOracleId;
+    if (!conditionTxOracleObjectId) throw new Error('Condition tx oracle object id not found');
+
+
+    const escrowCoin = txb.splitCoins(txb.gas, [txb.pure.u64(escrowCoinValue)]);
+    txb.moveCall({
+        target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::condition_tx_executor::submit_transfer_command_with_escrow`,
+        arguments: [
+            txb.object(conditionTxOracleObjectId),
+            txb.pure.u64(BigInt(startBlockNumber)),
+            txb.pure.vector('u8', hexToNumberArray(transferAccount)),
+            txb.pure.u8(OP_MAP[transferOperator as Operator]),
+            txb.pure.u64(BigInt(expectedTransferAmount)),
+            txb.pure.address(actionTarget),
+            escrowCoin,
+        ],
+    });
+
+    const res = await signAndExecute(txb, ACTIVE_NETWORK);
+
+    if (!res.objectChanges || res.objectChanges.length === 0)
+        throw new Error('Something went wrong while submitting transfer command with escrow.');
+
+    console.log('Successfully submitted transfer command with escrow.');
+};
+
+const verifyMPTProof = async (conditionTxId: string, blockNumber: string, account: string) => {
     // eth_getProof (POST /:apiKey)
     const response = await fetch(`https://${process.env.ETH_NETWORK}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`, {
         method: "POST",
@@ -170,6 +199,7 @@ const verifyMPTProof = async (blockNumber: string, account: string) => {
             txb.object(mptProofVerifierObjectId),
             txb.object(stateRootOracleObjectId),
             txb.object(conditionTxOracleObjectId),
+            txb.pure.u256(BigInt(conditionTxId)),
             txb.pure.u64(BigInt(blockNumber)),
             txb.pure.vector('u8', hexToNumberArray(account)),
             txb.pure.vector('vector<u8>', body.result.accountProof.map((x: string) => hexToNumberArray(x))),
@@ -197,13 +227,12 @@ const Condition2BlockNumber = '0x9a9b05';
 const Condition2Account = '0xded4e253d606d27daee949b862e7a18645cda442';
 
 const receiver = '0x08866b897d05fc1fc955248612f09e30f9684da753765272735df63a6490a8d9';
-const escrowCoinValue = '123';
+const escrowCoinValue = '128';
 
 async function main() {
     await submitStateRoots([Condition1BlockNumber, Condition2BlockNumber]);
 
     await submitCommandWithEscrow(
-        '0x0',
         StartBlockNumber,
         [
             [Condition1Account, 'LTE', '0xb1a2bc2ec50000'],
@@ -211,7 +240,33 @@ async function main() {
         ], receiver, escrowCoinValue
     );
 
-    await verifyMPTProof(Condition1BlockNumber, Condition1Account);
-    await verifyMPTProof(Condition2BlockNumber, Condition2Account);
+    await verifyMPTProof('0x0', Condition1BlockNumber, Condition1Account);
+    await verifyMPTProof('0x0', Condition2BlockNumber, Condition2Account);
+
+
+    await submitTransferCommandWithEscrow(
+        StartBlockNumber,
+        Condition1Account,
+        'FI',
+        '99660800000000000',
+        receiver,
+        escrowCoinValue
+    );
+
+    await verifyMPTProof('0x1', Condition1BlockNumber, Condition1Account);
+    await verifyMPTProof('0x1', Condition2BlockNumber, Condition2Account);
+
+
+    await submitTransferCommandWithEscrow(
+        StartBlockNumber,
+        Condition1Account,
+        'PI',
+        '398643200000000000',
+        receiver,
+        escrowCoinValue
+    );
+
+    await verifyMPTProof('0x2', Condition1BlockNumber, Condition1Account);
+    await verifyMPTProof('0x2', Condition2BlockNumber, Condition2Account);
 }
 main().catch(console.error);

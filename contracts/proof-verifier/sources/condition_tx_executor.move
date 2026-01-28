@@ -1,6 +1,7 @@
 module proof_verifier::condition_tx_executor {
     use std::string::String;
     use std::string;
+    use std::u256;
     use sui::dynamic_object_field as dof;
     use sui::package;
     use sui::balance;
@@ -30,16 +31,22 @@ module proof_verifier::condition_tx_executor {
         LT,
         LTE,
         EQ,
-        NEQ
+        NEQ,
+        FI, // Full transfer initial
+        FS, // Full transfer set
+        PI, // Partial transfer initial
+        PS, // Partial transfer set
     }
 
     public struct Condition has copy, drop, store {
         account: vector<u8>,
         operator: Operator,
         value: u256,
+        expected_transfer_amount: u64,
     }
 
     public struct TxAction has copy, drop, store {
+        source: address,
         recipient: address,
         amount: u64,
     }
@@ -100,6 +107,7 @@ module proof_verifier::condition_tx_executor {
                 Operator::LTE => string::utf8(b"LTE"),
                 Operator::EQ => string::utf8(b"EQ"),
                 Operator::NEQ => string::utf8(b"NEQ"),
+                _ => abort E_BAD_INPUT,
             },
             condition_value: condition_tx.list_of_conditions[0].value,
             action_target: condition_tx.action.recipient,
@@ -121,8 +129,45 @@ module proof_verifier::condition_tx_executor {
                 Operator::LTE => string::utf8(b"LTE"),
                 Operator::EQ => string::utf8(b"EQ"),
                 Operator::NEQ => string::utf8(b"NEQ"),
+                _ => abort E_BAD_INPUT,
             },
             condition_value: condition_tx.list_of_conditions[0].value,
+        });
+    }
+
+    fun emit_transfer_condition_tx_created(
+        condition_tx: ConditionTx
+    ) {
+        event::emit(TransferConditionTxCreated {
+            id: condition_tx.id,
+            after_block_number: condition_tx.after_block_number,
+            transfer_account: string::utf8(hex::encode(condition_tx.list_of_conditions[0].account)),
+            transfer_operator: match (condition_tx.list_of_conditions[0].operator) {
+                Operator::FI => string::utf8(b"FI"),
+                Operator::PI => string::utf8(b"PI"),
+                _ => abort E_BAD_INPUT,
+            },
+            expected_transfer_amount: condition_tx.list_of_conditions[0].expected_transfer_amount,
+            action_target: condition_tx.action.recipient,
+            action_value: condition_tx.action.amount,
+        });
+    }
+
+    fun emit_transfer_condition_tx_updated(
+        condition_tx: ConditionTx
+    ) {
+        event::emit(TransferConditionTxUpdated {
+            id: condition_tx.id,
+            after_block_number: condition_tx.after_block_number,
+            transfer_account: string::utf8(hex::encode(condition_tx.list_of_conditions[0].account)),
+            transfer_operator: match (condition_tx.list_of_conditions[0].operator) {
+                Operator::FI => string::utf8(b"FI"),
+                Operator::FS => string::utf8(b"FS"),
+                Operator::PI => string::utf8(b"PI"),
+                Operator::PS => string::utf8(b"PS"),
+                _ => abort E_BAD_INPUT,
+            },
+            expected_transfer_amount: condition_tx.list_of_conditions[0].expected_transfer_amount,
         });
     }
 
@@ -156,6 +201,7 @@ module proof_verifier::condition_tx_executor {
                     _ => abort E_BAD_INPUT,
                 },
                 value: list_of_condition_values[i],
+                expected_transfer_amount: 0,
             });
             i = i + 1;
         };
@@ -164,10 +210,44 @@ module proof_verifier::condition_tx_executor {
             id: oracle.next_condition_tx_id,
             after_block_number: after_block_number,
             list_of_conditions,
-            action: TxAction { recipient: action_target, amount: coin::value(&action_escrow)},
+            action: TxAction { source: ctx.sender(), recipient: action_target, amount: coin::value(&action_escrow)},
         };
         oracle.next_condition_tx_id = oracle.next_condition_tx_id + 1;
         emit_condition_tx_created(condition_tx);
+        push_condition_tx_to_oracle(oracle, condition_tx, ctx);
+        balance::join(&mut oracle.vault, coin::into_balance(action_escrow));
+    }
+
+    public fun submit_transfer_command_with_escrow(
+        oracle: &mut ConditionTxOracle,
+        after_block_number: u64,
+        transfer_account: vector<u8>,
+        transfer_operator: u8,
+        expected_transfer_amount: u64,
+        action_target: address,
+        action_escrow: coin::Coin<SUI>,
+        ctx: &mut TxContext
+    ) {
+        let mut list_of_conditions = vector::empty<Condition>();
+        vector::push_back(&mut list_of_conditions, Condition {
+            account: transfer_account,
+            operator: match (transfer_operator) {
+                6 => Operator::FI,
+                8 => Operator::PI,
+                _ => abort E_BAD_INPUT,
+            },
+            value: 0,
+            expected_transfer_amount: expected_transfer_amount,
+        });
+
+        let condition_tx = ConditionTx {
+            id: oracle.next_condition_tx_id,
+            after_block_number: after_block_number,
+            list_of_conditions,
+            action: TxAction { source: ctx.sender(), recipient: action_target, amount: coin::value(&action_escrow)},
+        };
+        oracle.next_condition_tx_id = oracle.next_condition_tx_id + 1;
+        emit_transfer_condition_tx_created(condition_tx);
         push_condition_tx_to_oracle(oracle, condition_tx, ctx);
         balance::join(&mut oracle.vault, coin::into_balance(action_escrow));
     }
@@ -185,6 +265,10 @@ module proof_verifier::condition_tx_executor {
             Operator::LTE => balance <= condition.value,
             Operator::EQ => balance == condition.value,
             Operator::NEQ => balance != condition.value,
+            Operator::FI => true,
+            Operator::FS => balance >= condition.value + (condition.expected_transfer_amount as u256),
+            Operator::PI => true,
+            Operator::PS => balance > condition.value,
         } && block_number > after_block_number
     }
 
@@ -207,11 +291,41 @@ module proof_verifier::condition_tx_executor {
                     let condition_met = meets_condition(block_number, condition_tx.after_block_number, balance, &condition);
                     if (condition_met) {
                         if (vector::length(&condition_tx.list_of_conditions) == 1) {
-                            let action = condition_tx.action;
-                            transfer::public_transfer(coin::from_balance(balance::split(&mut oracle.vault, action.amount), ctx), action.recipient);
-                            event::emit(ConditionTxCompleted {
-                                id: condition_tx.id,
-                            });
+                            if (condition.operator == Operator::FI || condition.operator == Operator::PI) {
+                                let mut new_list_of_conditions = vector::empty<Condition>();
+                                vector::push_back(&mut new_list_of_conditions, Condition {
+                                    account: condition.account,
+                                    operator: match (condition.operator) {
+                                        Operator::FI => Operator::FS,
+                                        Operator::PI => Operator::PS,
+                                        _ => abort E_BAD_INPUT,
+                                    },
+                                    value: balance,
+                                    expected_transfer_amount: condition.expected_transfer_amount,
+                                });
+                                let new_condition_tx = ConditionTx {
+                                    id: condition_tx.id,
+                                    after_block_number: block_number,
+                                    list_of_conditions: new_list_of_conditions,
+                                    action: condition_tx.action,
+                                };
+                                vector::push_back(&mut list_of_new_condition_tx, new_condition_tx);
+                            } else if (condition.operator == Operator::PS) {
+                                let action = condition_tx.action;
+                                let transfer_amount = (u256::min(balance - condition.value, condition.expected_transfer_amount as u256) * (action.amount as u256) / (condition.expected_transfer_amount as u256)) as u64;
+                                let back_amount = action.amount - transfer_amount;
+                                transfer::public_transfer(coin::from_balance(balance::split(&mut oracle.vault, transfer_amount), ctx), action.recipient);
+                                transfer::public_transfer(coin::from_balance(balance::split(&mut oracle.vault, back_amount), ctx), action.source);
+                                event::emit(ConditionTxCompleted {
+                                    id: condition_tx.id,
+                                });
+                            } else {
+                                let action = condition_tx.action;
+                                transfer::public_transfer(coin::from_balance(balance::split(&mut oracle.vault, action.amount), ctx), action.recipient);
+                                event::emit(ConditionTxCompleted {
+                                    id: condition_tx.id,
+                                });
+                            }
                         } else {
                             let mut new_list_of_conditions = vector::empty<Condition>();
                             let mut j: u64 = 1;
@@ -235,7 +349,12 @@ module proof_verifier::condition_tx_executor {
 
             let mut k = 0;
             while (k < vector::length(&list_of_new_condition_tx)) {
-                emit_condition_tx_updated(list_of_new_condition_tx[k]);
+                let operator = list_of_new_condition_tx[k].list_of_conditions[0].operator;
+                if (operator == Operator::FS || operator == Operator::PS) {
+                    emit_transfer_condition_tx_updated(list_of_new_condition_tx[k]);
+                } else {
+                    emit_condition_tx_updated(list_of_new_condition_tx[k]);
+                };
                 push_condition_tx_to_oracle(oracle, list_of_new_condition_tx[k], ctx);
                 k = k + 1;
             };
@@ -294,6 +413,25 @@ module proof_verifier::condition_tx_executor {
 
     public struct ConditionTxCompleted has copy, drop {
         id: u256,
+    }
+
+
+    public struct TransferConditionTxCreated has copy, drop {
+        id: u256,
+        after_block_number: u64,
+        transfer_account: String,
+        transfer_operator: String,
+        expected_transfer_amount: u64,
+        action_target: address,
+        action_value: u64,
+    }
+
+    public struct TransferConditionTxUpdated has copy, drop {
+        id: u256,
+        after_block_number: u64,
+        transfer_account: String,
+        transfer_operator: String,
+        expected_transfer_amount: u64,
     }
 
     #[test_only]

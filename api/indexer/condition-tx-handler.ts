@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 
 import { prisma } from '../db';
 
-type ConditionTxEvent = ConditionTxCreated | ConditionTxUpdated | ConditionTxCompleted;
+type ConditionTxEvent = ConditionTxCreated | ConditionTxUpdated | ConditionTxCompleted | TransferConditionTxCreated | TransferConditionTxUpdated;
 
 type ConditionTxCreated = {
 	id: string;
@@ -29,6 +29,24 @@ type ConditionTxCompleted = {
 	id: string;
 };
 
+type TransferConditionTxCreated = {
+	id: string;
+	after_block_number: string;
+	transfer_account: string;
+	transfer_operator: string;
+	expected_transfer_amount: string;
+	action_target: string;
+	action_value: string;
+};
+
+type TransferConditionTxUpdated = {
+	id: string;
+	after_block_number: string;
+	transfer_account: string;
+	transfer_operator: string;
+	expected_transfer_amount: string;
+};
+
 /**
  * Handles all events emitted by the `escrow` module.
  * Data is modelled in a way that allows writing to the db in any order (DESC or ASC) without
@@ -42,9 +60,59 @@ export const handleConditionTxsObjects = async (events: SuiEvent[], type: string
 	for (const event of events) {
 		if (!event.type.startsWith(type)) throw new Error('Invalid event module origin');
 		const data = event.parsedJson as ConditionTxEvent;
+		const isTransferEvent = 'transfer_account' in data;
 		const isCreationEvent = 'action_target' in data;
 		const isCompletionEvent = !('condition_account' in data);
 
+		if (isTransferEvent) {
+			if (isCreationEvent) {
+				let action = "";
+				if (data.transfer_operator == "FI") {
+					action = "Transfer a full amount of " + data.action_value + " MIST to " + data.action_target + ", in exchange for " + data.expected_transfer_amount + " Wei on Ethereum";
+				} else if (data.transfer_operator == "PI") {
+					action = "Transfer a proportional amount of " + data.action_value + " MIST to " + data.action_target + ", based on the ratio of the actual Wei transferred on Ethereum to the expected amount of " + data.expected_transfer_amount + " Wei";
+				} else {
+					throw new Error('Invalid transfer operator: ' + data.transfer_operator);
+				}
+				updates[data.id] = {
+					objectId: data.id,
+					condition: "After block 0x" + BigInt(data.after_block_number).toString(16) + ", set an initial balance of 0x" + data.transfer_account,
+					action: action,
+					nextConditionAccount: "0x" + data.transfer_account,
+					actionTarget: data.action_target,
+				};
+				continue;
+			}
+			let existing = updates[data.id];
+			if (!existing) {
+				const dbRow = await prisma.conditionTx.findUnique({
+					where: { objectId: String(data.id) },
+				});
+				if (dbRow) {
+					existing = updates[data.id] = {
+						objectId: dbRow.objectId,
+						condition: dbRow.condition,
+						action: dbRow.action,
+						nextConditionAccount: dbRow.nextConditionAccount,
+						actionTarget: dbRow.actionTarget,
+					};
+				} else {
+					throw new Error('Condition tx not found: ' + data.id);
+				}
+			}
+
+			let condition = "";
+			if (data.transfer_operator == "FS") {
+				condition = "After block 0x" + BigInt(data.after_block_number).toString(16) + ", 0x" + data.transfer_account + " has received " + data.expected_transfer_amount + "Wei";
+			} else if (data.transfer_operator == "PS") {
+				condition = "After block 0x" + BigInt(data.after_block_number).toString(16) + ", 0x" + data.transfer_account + " has received a proportional amount of " + data.expected_transfer_amount + "Wei";
+			} else {
+				throw new Error('Invalid transfer operator: ' + data.transfer_operator);
+			}
+			existing.condition = condition;
+			existing.nextConditionAccount = "0x" + data.transfer_account;
+			continue;
+		}
 		if (isCreationEvent) {
 			updates[data.id] = {
 				objectId: data.id,

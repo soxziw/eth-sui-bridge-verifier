@@ -4,7 +4,7 @@
 import { Transaction } from "@mysten/sui/transactions";
 import { CONSTANTS } from "@/constants";
 
-export type Operator = 'GT' | 'GTE' | 'LT' | 'LTE' | 'EQ' | 'NEQ';
+export type Operator = 'GT' | 'GTE' | 'LT' | 'LTE' | 'EQ' | 'NEQ' | 'FI' | 'PI';
 
 export const OP_MAP: Record<Operator, number> = {
   GT: 0,
@@ -13,6 +13,8 @@ export const OP_MAP: Record<Operator, number> = {
   LTE: 3,
   EQ: 4,
   NEQ: 5,
+  FI: 6,
+  PI: 8,
 };
 
 function hexToNumberArray(hex: string): number[] {
@@ -28,6 +30,7 @@ export interface Condition {
   account: string;
   operator: Operator;
   balance: string;
+  expectedTransferAmount: string;
 }
 
 /**
@@ -218,6 +221,95 @@ export async function createSubmitCommandTransaction(
       txb.pure.vector("vector<u8>", listOfConditionAccounts),
       txb.pure.vector("u8", listOfConditionOperators),
       txb.pure.vector("u256", listOfConditionBalances),
+      txb.pure.address(actionTarget),
+      escrowCoin,
+    ],
+  });
+
+  return txb;
+}
+
+/**
+ * Creates a transaction to submit a command with escrow
+ */
+export async function createSubmitTransferCommandTransaction(
+  startBlock: string,
+  condition: Condition,
+  actionTarget: string,
+  escrowValue: string,
+  alchemyApiKey: string,
+  ethNetwork: string
+): Promise<Transaction> {
+  // Fetch start block from Alchemy
+  const startBlockResponse = await fetch(
+    `https://${ethNetwork}.g.alchemy.com/v2/${alchemyApiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getBlockByNumber",
+        params: [startBlock, false],
+        id: 1,
+      }),
+    }
+  );
+
+  const startBlockBody = await startBlockResponse.json();
+
+  if (startBlockBody.error) {
+    throw new Error(`Failed to fetch start block: ${startBlockBody.error.message}`);
+  }
+
+  // Fetch finalized block from Alchemy
+  const finalizedBlockResponse = await fetch(
+    `https://${ethNetwork}.g.alchemy.com/v2/${alchemyApiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getBlockByNumber",
+        params: ["finalized", false],
+        id: 1,
+      }),
+    }
+  );
+
+  const finalizedBlockBody = await finalizedBlockResponse.json();
+
+  if (finalizedBlockBody.error) {
+    throw new Error(`Failed to fetch finalized block: ${finalizedBlockBody.error.message}`);
+  }
+
+  const startBlockNumber = startBlockBody.result.number;
+  const finalizedBlockNumber = finalizedBlockBody.result.number;
+
+  if (startBlockNumber > finalizedBlockNumber) {
+    throw new Error("Start block is greater than finalized block");
+  }
+
+  const txb = new Transaction();
+  const conditionTxOracleObjectId =
+    CONSTANTS.proofVerifierContract.conditionTxOracleId;
+
+  if (!conditionTxOracleObjectId) {
+    throw new Error("Condition tx oracle object id not found");
+  }
+
+  const escrowCoin = txb.splitCoins(txb.gas, [txb.pure.u64(escrowValue)]);
+  txb.moveCall({
+    target: `${CONSTANTS.proofVerifierContract.packageId}::condition_tx_executor::submit_transfer_command_with_escrow`,
+    arguments: [
+      txb.object(conditionTxOracleObjectId),
+      txb.pure.u64(BigInt(startBlockNumber)),
+      txb.pure.vector("u8", hexToNumberArray(condition.account)),
+      txb.pure.u8(OP_MAP[condition.operator]),
+      txb.pure.u64(BigInt(condition.expectedTransferAmount)),
       txb.pure.address(actionTarget),
       escrowCoin,
     ],

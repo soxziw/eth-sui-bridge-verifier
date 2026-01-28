@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button, Dialog, Flex, TextField, Text, Select, IconButton } from "@radix-ui/themes";
 import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useTransactionExecution } from "@/hooks/useTransactionExecution";
-import { createSubmitCommandTransaction, Condition, Operator } from "@/utils/transactions";
+import { createSubmitCommandTransaction, Condition, Operator, createSubmitTransferCommandTransaction } from "@/utils/transactions";
 import toast from "react-hot-toast";
 
 interface SubmitCommandDialogProps {
@@ -19,7 +19,7 @@ export function SubmitCommandDialog({
 }: SubmitCommandDialogProps) {
   const [startBlock, setStartBlock] = useState("");
   const [conditions, setConditions] = useState<Condition[]>([
-    { account: "", operator: "EQ" as Operator, balance: "" },
+    { account: "", operator: "EQ" as Operator, balance: "", expectedTransferAmount: "" },
   ]);
   const [actionTarget, setActionTarget] = useState("");
   const [escrowValue, setEscrowValue] = useState("");
@@ -32,7 +32,7 @@ export function SubmitCommandDialog({
   const addCondition = () => {
     setConditions([
       ...conditions,
-      { account: "", operator: "EQ" as Operator, balance: "" },
+      { account: "", operator: "EQ" as Operator, balance: "", expectedTransferAmount: "" },
     ]);
   };
 
@@ -60,7 +60,7 @@ export function SubmitCommandDialog({
     }
 
     const invalidCondition = conditions.find(
-      (c) => !c.account || !c.balance
+      (c) => !c.account || (c.operator !== "FI" && c.operator !== "PI" && !c.balance) || ((c.operator == "FI" || c.operator == "PI") && (!c.expectedTransferAmount || conditions.length > 1))
     );
     if (invalidCondition) {
       toast.error("Please fill in all condition fields");
@@ -74,17 +74,29 @@ export function SubmitCommandDialog({
     
     setLoading(true);
     try {
-      const txb = await createSubmitCommandTransaction(
-        startBlock,
-        conditions,
-        actionTarget,
-        escrowValue,
-        alchemyApiKey,
-        ethNetwork,
-      );
-      await executeTransaction(txb);
+      if (conditions[0].operator == "FI" || conditions[0].operator == "PI") {
+        const txb = await createSubmitTransferCommandTransaction(
+          startBlock,
+          conditions[0],
+          actionTarget,
+          escrowValue,
+          alchemyApiKey,
+          ethNetwork,
+        );
+        await executeTransaction(txb);
+      } else {
+        const txb = await createSubmitCommandTransaction(
+          startBlock,
+          conditions,
+          actionTarget,
+          escrowValue,
+          alchemyApiKey,
+          ethNetwork,
+        );
+        await executeTransaction(txb);
+      }
       // Reset form
-      setConditions([{ account: "", operator: "EQ" as Operator, balance: "" }]);
+      setConditions([{ account: "", operator: "EQ" as Operator, balance: "", expectedTransferAmount: "" }]);
       setActionTarget("");
       setEscrowValue("");
       onOpenChange(false);
@@ -174,22 +186,41 @@ export function SubmitCommandDialog({
                       <Select.Item value="GTE">Greater Than or Equal (GTE)</Select.Item>
                       <Select.Item value="LT">Less Than (LT)</Select.Item>
                       <Select.Item value="LTE">Less Than or Equal (LTE)</Select.Item>
+                      <Select.Item value="FI">Full Transfer (FI)</Select.Item>
+                      <Select.Item value="PI">Partial Transfer (PI)</Select.Item>
                     </Select.Content>
                   </Select.Root>
                 </label>
 
-                <label>
-                  <Text as="div" size="1" mb="1">
-                    Balance *
-                  </Text>
-                  <TextField.Root
-                    placeholder="e.g., 0x0 or 0x470de4df8200000"
-                    value={condition.balance}
-                    onChange={(e) =>
-                      updateCondition(index, "balance", e.target.value)
-                    }
-                  />
-                </label>
+                {condition.operator !== "FI" && condition.operator !== "PI" && (
+                  <label>
+                    <Text as="div" size="1" mb="1">
+                      Balance *
+                    </Text>
+                    <TextField.Root
+                      placeholder="e.g., 0x0 or 0x470de4df8200000"
+                      value={condition.balance}
+                      onChange={(e) =>
+                        updateCondition(index, "balance", e.target.value)
+                      }
+                    />
+                  </label>
+                )}
+
+                {(condition.operator == "FI" || condition.operator == "PI") && (
+                  <label>
+                    <Text as="div" size="1" mb="1">
+                      Expected Transfer Amount *
+                    </Text>
+                    <TextField.Root
+                      placeholder="e.g., 123"
+                      value={condition.expectedTransferAmount}
+                      onChange={(e) =>
+                        updateCondition(index, "expectedTransferAmount", e.target.value)
+                      }
+                    />
+                  </label>
+                )}
               </Flex>
             ))}
           </div>

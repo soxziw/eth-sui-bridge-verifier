@@ -6,7 +6,7 @@
 	"main": "server.ts",
 	"scripts": {
 		"demo": "pnpm db:reset:dev && pnpm db:setup:dev && npx ts-node helpers/publish-contracts.ts && npx ts-node helpers/create-demo-data.ts && concurrently \"npx ts-node helpers/register-state-roots.ts\" \"pnpm api:dev\" \"pnpm indexer\"",
-		"full-demo": "pnpm db:reset:dev && pnpm db:setup:dev && npx ts-node helpers/publish-contracts.ts && npx ts-node helpers/create-full-e2e-demo.ts && concurrently \"npx ts-node helpers/register-state-roots.ts\" \"pnpm api:dev\" \"pnpm indexer\"",
+		"test-demo": "pnpm db:reset:dev && pnpm db:setup:dev && npx ts-node helpers/publish-contracts.ts && npx ts-node helpers/create-full-e2e-demo.ts && concurrently \"pnpm api:dev\" \"pnpm indexer\"",
 		"test": "pnpm db:reset:dev && pnpm db:setup:dev && npx ts-node helpers/publish-contracts.ts && npx ts-node helpers/create-demo-data.ts && concurrently \"pnpm api:dev\" \"pnpm indexer\"",
 		"dev": "concurrently \"pnpm api:dev\" \"pnpm indexer\"",
 		"db:setup:dev": "npx prisma migrate dev --name init",

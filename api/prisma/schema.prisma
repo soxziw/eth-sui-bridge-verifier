@@ -31,12 +31,14 @@ model ConditionTx {
 }
 
 model MPTProof {
-  id          Int    @id @default(autoincrement())
-  objectId    String @unique
-  blockNumber String
-  account     String
-  balance     String
+  id            Int    @id @default(autoincrement())
+  objectId      String @unique
+  conditionTxId String
+  blockNumber   String
+  account       String
+  balance       String
 
+  @@index([conditionTxId])
   @@index([blockNumber])
   @@index([account])
 }

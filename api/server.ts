@@ -75,6 +75,10 @@ app.get('/condition-txs', async (req, res) => {
 app.get('/mpt-proofs', async (req, res) => {
 	const acceptedQueries: WhereParam[] = [
 		{
+			key: 'conditionTxId',
+			type: WhereParamTypes.STRING,
+		},
+		{
 			key: 'blockNumber',
 			type: WhereParamTypes.STRING,
 		},

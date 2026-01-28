@@ -15,6 +15,12 @@ export function MPTProof({ mptProof }: { mptProof: ApiMPTProofObject }) {
           </Text>
         </Flex>
         <Flex justify="between" align="center">
+          <Text size="2" weight="bold">Condition Tx ID</Text>
+          <Text size="1" className="break-all font-mono text-gray-600">
+            {mptProof.conditionTxId}
+          </Text>
+        </Flex>
+        <Flex justify="between" align="center">
           <Text size="2" weight="bold">Block Number</Text>
           <Badge color="blue">{mptProof.blockNumber}</Badge>
         </Flex>

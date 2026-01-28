@@ -90,6 +90,7 @@ module proof_verifier::mpt_proof_verifier {
 
         event::emit(MPTProofVerified {
             id: mpt_proof_id,
+            condition_tx_id: condition_tx_id,
             block_number: block_number,
             account: string::utf8(hex::encode(account)),
             balance: decoded.balance,
@@ -397,6 +398,7 @@ module proof_verifier::mpt_proof_verifier {
 
     public struct MPTProofVerified has copy, drop {
         id: u256,
+        condition_tx_id: u256,
         block_number: u64,
         account: String,
         balance: u256,

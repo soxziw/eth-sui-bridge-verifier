@@ -3,6 +3,7 @@ import { MPTProofList } from "@/mpt_proof/MPTProofList.tsx";
 import { useState } from "react";
 
 export function MPTProofsDashboard() {
+  const [conditionTxId, setConditionTxId] = useState("");
   const [blockNumber, setBlockNumber] = useState("");
   const [account, setAccount] = useState("");
 
@@ -13,6 +14,11 @@ export function MPTProofsDashboard() {
         
         <Flex direction="column" gap="3">
           <Heading size="4">Filters</Heading>
+          <TextField.Root
+            placeholder="Filter by Condition Tx ID"
+            value={conditionTxId}
+            onChange={(e) => setConditionTxId(e.target.value)}
+          />
           <TextField.Root
             placeholder="Filter by Block Number"
             value={blockNumber}
@@ -26,7 +32,8 @@ export function MPTProofsDashboard() {
         </Flex>
 
         <MPTProofList 
-          params={{ 
+          params={{
+            conditionTxId: conditionTxId || undefined,
             blockNumber: blockNumber || undefined,
             account: account || undefined
           }} 

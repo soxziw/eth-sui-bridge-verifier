@@ -17,6 +17,7 @@ export type ApiConditionTxObject = {
 export type ApiMPTProofObject = {
     id?: string;
     objectId: string;
+    conditionTxId: string;
     blockNumber: string;
     account: string;
     balance: string;
@@ -33,6 +34,7 @@ export type ConditionTxListingQuery = {
 };
 
 export type MPTProofListingQuery = {
+    conditionTxId?: string;
     blockNumber?: string;
     account?: string;
 };

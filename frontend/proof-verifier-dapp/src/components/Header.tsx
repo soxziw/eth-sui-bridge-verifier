@@ -3,7 +3,6 @@ import { SizeIcon } from "@radix-ui/react-icons";
 import { Box, Container, Flex, Heading, Button } from "@radix-ui/themes";
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
-import { RequestProofDialog } from "./RequestProofDialog";
 import { SubmitCommandDialog } from "./SubmitCommandDialog";
 
 const menu = [
@@ -23,7 +22,6 @@ const menu = [
 
 export function Header() {
   const account = useCurrentAccount();
-  const [requestProofOpen, setRequestProofOpen] = useState(false);
   const [submitCommandOpen, setSubmitCommandOpen] = useState(false);
   
   return (
@@ -65,15 +63,6 @@ export function Header() {
         <Box className="flex gap-3 items-center">
           {account && (
             <Button
-              variant="soft"
-              onClick={() => setRequestProofOpen(true)}
-            >
-              Request Proof
-            </Button>
-          )}
-
-          {account && (
-            <Button
               variant="solid"
               color="green"
               onClick={() => setSubmitCommandOpen(true)}
@@ -85,11 +74,6 @@ export function Header() {
           <ConnectButton />
         </Box>
       </Flex>
-
-      <RequestProofDialog
-        open={requestProofOpen}
-        onOpenChange={setRequestProofOpen}
-      />
 
       <SubmitCommandDialog
         open={submitCommandOpen}

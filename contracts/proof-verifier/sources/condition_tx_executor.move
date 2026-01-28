@@ -253,11 +253,12 @@ module proof_verifier::condition_tx_executor {
     }
 
     fun meets_condition(
+        condition_tx_id: u256,
         block_number: u64,
-        after_block_number: u64,
         balance: u256,
-        condition: &Condition
+        condition_tx: &ConditionTx
     ): bool {
+        let condition = condition_tx.list_of_conditions[0];
         match (&condition.operator) {
             Operator::GT => balance > condition.value,
             Operator::GTE => balance >= condition.value,
@@ -269,11 +270,12 @@ module proof_verifier::condition_tx_executor {
             Operator::FS => balance >= condition.value + (condition.expected_transfer_amount as u256),
             Operator::PI => true,
             Operator::PS => balance > condition.value,
-        } && block_number > after_block_number
+        } && block_number > condition_tx.after_block_number && condition_tx_id == condition_tx.id
     }
 
     public(package) fun submit_verified_account(
         oracle: &mut ConditionTxOracle,
+        condition_tx_id: u256,
         block_number: u64,
         account: vector<u8>,
         balance: u256,
@@ -281,14 +283,14 @@ module proof_verifier::condition_tx_executor {
     ) {
         if (dof::exists_with_type<vector<u8>, AccountConditionTxOracle>(&oracle.id, account)) {
             let mut list_of_condition_met = vector::empty<bool>();
-            let mut list_of_new_condition_tx = vector::empty<ConditionTx>();
+            let mut new_condition_tx: Option<ConditionTx> = option::none();
             {
                 let account_condition_tx_oracle = dof::borrow<vector<u8>, AccountConditionTxOracle>(&oracle.id, account);
                 let mut i: u64 = 0;
                 while (i < vector::length(&account_condition_tx_oracle.list_of_condition_tx)) {
                     let condition_tx = account_condition_tx_oracle.list_of_condition_tx[i];
                     let condition = condition_tx.list_of_conditions[0];
-                    let condition_met = meets_condition(block_number, condition_tx.after_block_number, balance, &condition);
+                    let condition_met = meets_condition(condition_tx_id, block_number,  balance, &condition_tx);
                     if (condition_met) {
                         if (vector::length(&condition_tx.list_of_conditions) == 1) {
                             if (condition.operator == Operator::FI || condition.operator == Operator::PI) {
@@ -303,13 +305,12 @@ module proof_verifier::condition_tx_executor {
                                     value: balance,
                                     expected_transfer_amount: condition.expected_transfer_amount,
                                 });
-                                let new_condition_tx = ConditionTx {
+                                new_condition_tx = option::some(ConditionTx {
                                     id: condition_tx.id,
                                     after_block_number: block_number,
                                     list_of_conditions: new_list_of_conditions,
                                     action: condition_tx.action,
-                                };
-                                vector::push_back(&mut list_of_new_condition_tx, new_condition_tx);
+                                });
                             } else if (condition.operator == Operator::PS) {
                                 let action = condition_tx.action;
                                 let transfer_amount = (u256::min(balance - condition.value, condition.expected_transfer_amount as u256) * (action.amount as u256) / (condition.expected_transfer_amount as u256)) as u64;
@@ -333,13 +334,12 @@ module proof_verifier::condition_tx_executor {
                                 vector::push_back(&mut new_list_of_conditions, condition_tx.list_of_conditions[j]);
                                 j = j + 1;
                             };
-                            let new_condition_tx = ConditionTx {
+                            new_condition_tx = option::some(ConditionTx {
                                 id: condition_tx.id,
                                 after_block_number: block_number,
                                 list_of_conditions: new_list_of_conditions,
                                 action: condition_tx.action,
-                            };
-                            vector::push_back(&mut list_of_new_condition_tx, new_condition_tx);
+                            });
                         }
                     };
                     vector::push_back(&mut list_of_condition_met, condition_met);
@@ -347,47 +347,45 @@ module proof_verifier::condition_tx_executor {
                 };
             };
 
-            let mut k = 0;
-            while (k < vector::length(&list_of_new_condition_tx)) {
-                let operator = list_of_new_condition_tx[k].list_of_conditions[0].operator;
+            if (new_condition_tx.is_some()) {
+                let operator = new_condition_tx.borrow().list_of_conditions[0].operator;
                 if (operator == Operator::FS || operator == Operator::PS) {
-                    emit_transfer_condition_tx_updated(list_of_new_condition_tx[k]);
+                    emit_transfer_condition_tx_updated(*new_condition_tx.borrow());
                 } else {
-                    emit_condition_tx_updated(list_of_new_condition_tx[k]);
+                    emit_condition_tx_updated(*new_condition_tx.borrow());
                 };
-                push_condition_tx_to_oracle(oracle, list_of_new_condition_tx[k], ctx);
-                k = k + 1;
-            };
+                push_condition_tx_to_oracle(oracle, *new_condition_tx.borrow(), ctx);
 
-            let mut new_list_of_condition_tx = vector::empty<ConditionTx>();
-            {
-                let account_condition_tx_oracle = dof::borrow<vector<u8>, AccountConditionTxOracle>(&oracle.id, account);
-                let mut l = vector::length(&list_of_condition_met);
-                while (l < vector::length(&account_condition_tx_oracle.list_of_condition_tx)) {
-                    vector::push_back(&mut list_of_condition_met, false);
-                    l = l + 1;
-                };
-
-                let mut m: u64 = 0;
-                while (m < vector::length(&account_condition_tx_oracle.list_of_condition_tx)) {
-                    if (!list_of_condition_met[m]) {
-                        vector::push_back(&mut new_list_of_condition_tx, account_condition_tx_oracle.list_of_condition_tx[m]);
+                let mut new_list_of_condition_tx = vector::empty<ConditionTx>();
+                {
+                    let account_condition_tx_oracle = dof::borrow<vector<u8>, AccountConditionTxOracle>(&oracle.id, account);
+                    let mut l = vector::length(&list_of_condition_met);
+                    while (l < vector::length(&account_condition_tx_oracle.list_of_condition_tx)) {
+                        vector::push_back(&mut list_of_condition_met, false);
+                        l = l + 1;
                     };
-                    m = m + 1;
+
+                    let mut m: u64 = 0;
+                    while (m < vector::length(&account_condition_tx_oracle.list_of_condition_tx)) {
+                        if (!list_of_condition_met[m]) {
+                            vector::push_back(&mut new_list_of_condition_tx, account_condition_tx_oracle.list_of_condition_tx[m]);
+                        };
+                        m = m + 1;
+                    };
+                };
+
+                if (vector::length(&new_list_of_condition_tx) == 0) {
+                    let AccountConditionTxOracle {
+                        id,
+                        account: _,
+                        list_of_condition_tx: _,
+                    } = dof::remove(&mut oracle.id, account);
+                    object::delete(id);
+                } else {
+                    let account_condition_tx_oracle_mut = dof::borrow_mut<vector<u8>, AccountConditionTxOracle>(&mut oracle.id, account);
+                    account_condition_tx_oracle_mut.list_of_condition_tx = new_list_of_condition_tx;
                 };
             };
-
-            if (vector::length(&new_list_of_condition_tx) == 0) {
-                let AccountConditionTxOracle {
-                    id,
-                    account: _,
-                    list_of_condition_tx: _,
-                } = dof::remove(&mut oracle.id, account);
-                object::delete(id);
-            } else {
-                let account_condition_tx_oracle_mut = dof::borrow_mut<vector<u8>, AccountConditionTxOracle>(&mut oracle.id, account);
-                account_condition_tx_oracle_mut.list_of_condition_tx = new_list_of_condition_tx;
-            }
         } else {
             abort E_NO_COMMAND
         }

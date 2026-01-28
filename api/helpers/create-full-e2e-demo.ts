@@ -99,7 +99,7 @@ const OP_MAP: Record<Operator, number> = {
   EQ: 4,
   NEQ: 5,
 };
-const submitCommandWithEscrow = async (startBlockNumber: string, conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinValue: string) => {
+const submitCommandWithEscrow = async (conditionTxId: string, startBlockNumber: string, conditions: [account: string, operator: string, balance: string][], actionTarget: string, escrowCoinValue: string) => {
 	const txb = new Transaction();
     const conditionTxOracleObjectId = CONFIG.PROOF_VERIFIER_CONTRACT.conditionTxOracleId;
     if (!conditionTxOracleObjectId) throw new Error('Condition tx oracle object id not found');
@@ -114,6 +114,7 @@ const submitCommandWithEscrow = async (startBlockNumber: string, conditions: [ac
         target: `${CONFIG.PROOF_VERIFIER_CONTRACT.packageId}::condition_tx_executor::submit_command_with_escrow`,
         arguments: [
             txb.object(conditionTxOracleObjectId),
+            txb.pure.u256(BigInt(conditionTxId)),
             txb.pure.u64(BigInt(startBlockNumber)),
             txb.pure.vector('vector<u8>', listOfConditionAccounts),
             txb.pure.vector('u8', listOfConditionOperators),
@@ -202,6 +203,7 @@ async function main() {
     await submitStateRoots([Condition1BlockNumber, Condition2BlockNumber]);
 
     await submitCommandWithEscrow(
+        '0x0',
         StartBlockNumber,
         [
             [Condition1Account, 'LTE', '0xb1a2bc2ec50000'],

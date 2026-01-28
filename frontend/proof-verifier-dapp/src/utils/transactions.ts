@@ -37,6 +37,7 @@ export interface Condition {
  * Fetches proof from Alchemy API and creates a transaction to verify MPT proof
  */
 export async function createVerifyMPTProofTransaction(
+  conditionTxId: string,
   blockNumber: string,
   account: string,
   alchemyApiKey: string,
@@ -118,6 +119,7 @@ export async function createVerifyMPTProofTransaction(
       txb.object(mptProofVerifierObjectId),
       txb.object(stateRootOracleObjectId),
       txb.object(conditionTxOracleObjectId),
+      txb.pure.u256(BigInt(conditionTxId)),
       txb.pure.u64(BigInt(blockNumber)),
       txb.pure.vector("u8", hexToNumberArray(account)),
       txb.pure.vector(

@@ -96,6 +96,7 @@ export function SubmitCommandDialog({
         await executeTransaction(txb);
       }
       // Reset form
+      setStartBlock("");
       setConditions([{ account: "", operator: "EQ" as Operator, balance: "", expectedTransferAmount: "" }]);
       setActionTarget("");
       setEscrowValue("");

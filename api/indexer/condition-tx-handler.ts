@@ -103,9 +103,9 @@ export const handleConditionTxsObjects = async (events: SuiEvent[], type: string
 
 			let condition = "";
 			if (data.transfer_operator == "FS") {
-				condition = "After block 0x" + BigInt(data.after_block_number).toString(16) + ", 0x" + data.transfer_account + " has received " + data.expected_transfer_amount + "Wei";
+				condition = "After block 0x" + BigInt(data.after_block_number).toString(16) + ", 0x" + data.transfer_account + " has received " + data.expected_transfer_amount + " Wei on Ethereum";
 			} else if (data.transfer_operator == "PS") {
-				condition = "After block 0x" + BigInt(data.after_block_number).toString(16) + ", 0x" + data.transfer_account + " has received a proportional amount of " + data.expected_transfer_amount + "Wei";
+				condition = "After block 0x" + BigInt(data.after_block_number).toString(16) + ", 0x" + data.transfer_account + " has received a proportional amount of " + data.expected_transfer_amount + " Wei on Ethereum";
 			} else {
 				throw new Error('Invalid transfer operator: ' + data.transfer_operator);
 			}

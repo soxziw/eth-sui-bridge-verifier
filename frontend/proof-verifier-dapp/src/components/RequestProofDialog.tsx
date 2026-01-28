@@ -10,9 +10,10 @@ import toast from "react-hot-toast";
 interface RequestProofDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  conditionTxId: string;
 }
 
-export function RequestProofDialog({ open, onOpenChange }: RequestProofDialogProps) {
+export function RequestProofDialog({ open, onOpenChange, conditionTxId }: RequestProofDialogProps) {
   const [blockNumber, setBlockNumber] = useState("");
   const [account, setAccount] = useState("");
   const [alchemyApiKey, setAlchemyApiKey] = useState("");
@@ -35,6 +36,7 @@ export function RequestProofDialog({ open, onOpenChange }: RequestProofDialogPro
     setLoading(true);
     try {
       const txb = await createVerifyMPTProofTransaction(
+        conditionTxId,
         blockNumber,
         account,
         alchemyApiKey,
@@ -59,8 +61,13 @@ export function RequestProofDialog({ open, onOpenChange }: RequestProofDialogPro
       <Dialog.Content style={{ maxWidth: 500 }}>
         <Dialog.Title>Request Proof Verification</Dialog.Title>
         <Dialog.Description size="2" mb="4">
-          Submit a block number and account address to verify the MPT proof.
+          Submit a block number and account address to verify the MPT proof for this condition transaction.
         </Dialog.Description>
+        
+        <Flex direction="column" gap="1" mb="3">
+          <Text size="1" weight="bold" color="gray">Condition Transaction ID:</Text>
+          <Text size="1" className="font-mono break-all text-gray-600">{conditionTxId}</Text>
+        </Flex>
 
         <Flex direction="column" gap="3">
           <label>

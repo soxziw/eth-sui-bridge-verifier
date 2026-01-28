@@ -55,6 +55,7 @@ module proof_verifier::mpt_proof_verifier {
         mpt_proof_verifier: &mut MPTProofVerifier,
         state_root_oracle: &state_root_registry::StateRootOracle,
         condition_tx_oracle: &mut condition_tx_executor::ConditionTxOracle,
+        condition_tx_id: u256,
         block_number: u64,
         account: vector<u8>,
         account_proof: vector<vector<u8>>,
@@ -96,6 +97,7 @@ module proof_verifier::mpt_proof_verifier {
 
         condition_tx_executor::submit_verified_account(
             condition_tx_oracle,
+            condition_tx_id,
             block_number,
             account,
             expected_balance,

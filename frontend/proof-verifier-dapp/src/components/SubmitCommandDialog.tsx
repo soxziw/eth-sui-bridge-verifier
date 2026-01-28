@@ -6,6 +6,7 @@ import { Button, Dialog, Flex, TextField, Text, Select, IconButton } from "@radi
 import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { useTransactionExecution } from "@/hooks/useTransactionExecution";
 import { createSubmitCommandTransaction, Condition, Operator, createSubmitTransferCommandTransaction } from "@/utils/transactions";
+import { getAlchemyApiKey, getEthNetwork } from "./SettingsDialog";
 import toast from "react-hot-toast";
 
 interface SubmitCommandDialogProps {
@@ -23,11 +24,13 @@ export function SubmitCommandDialog({
   ]);
   const [actionTarget, setActionTarget] = useState("");
   const [escrowValue, setEscrowValue] = useState("");
-  const [alchemyApiKey, setAlchemyApiKey] = useState("");
-  const [ethNetwork, setEthNetwork] = useState("eth-sepolia");
   const [loading, setLoading] = useState(false);
   
   const executeTransaction = useTransactionExecution();
+
+  // Load settings from localStorage
+  const alchemyApiKey = getAlchemyApiKey();
+  const ethNetwork = getEthNetwork();
 
   const addCondition = () => {
     setConditions([
@@ -68,7 +71,7 @@ export function SubmitCommandDialog({
     }
 
     if (!alchemyApiKey) {
-      toast.error("Please provide Alchemy API Key");
+      toast.error("Please configure Alchemy API Key in Settings");
       return;
     }
     
@@ -250,35 +253,16 @@ export function SubmitCommandDialog({
             />
           </label>
 
-          {/* Alchemy API Key */}
-          <label>
-            <Text as="div" size="2" mb="1" weight="bold">
-              Alchemy API Key *
+          {/* Global Settings Info */}
+          <Flex direction="column" gap="1" className="p-3 border rounded bg-gray-50">
+            <Text size="2" weight="bold" color="gray">Using Global Settings:</Text>
+            <Text size="1" className="text-gray-600">
+              API Key: {alchemyApiKey ? "Configured" : "Not configured"}
             </Text>
-            <TextField.Root
-              type="password"
-              placeholder="Your Alchemy API Key"
-              value={alchemyApiKey}
-              onChange={(e) => setAlchemyApiKey(e.target.value)}
-            />
-          </label>
-
-          {/* Ethereum Network */}
-          <label>
-            <Text as="div" size="2" mb="1" weight="bold">
-              Ethereum Network
+            <Text size="1" className="text-gray-600">
+              Network: {ethNetwork === "eth-mainnet" ? "Mainnet" : "Sepolia"}
             </Text>
-            <Select.Root
-              value={ethNetwork}
-              onValueChange={(value) => setEthNetwork(value)}
-            >
-              <Select.Trigger placeholder="Select Ethereum Network" />
-              <Select.Content>
-                <Select.Item value="eth-mainnet">Mainnet</Select.Item>
-                <Select.Item value="eth-sepolia">Sepolia</Select.Item>
-              </Select.Content>
-            </Select.Root>
-          </label>
+          </Flex>
         </Flex>
 
         <Flex gap="3" mt="4" justify="end">

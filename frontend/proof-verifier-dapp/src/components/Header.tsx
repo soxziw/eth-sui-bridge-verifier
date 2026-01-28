@@ -1,9 +1,10 @@
 import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
-import { SizeIcon } from "@radix-ui/react-icons";
-import { Box, Container, Flex, Heading, Button } from "@radix-ui/themes";
+import { SizeIcon, GearIcon } from "@radix-ui/react-icons";
+import { Box, Container, Flex, Heading, Button, IconButton } from "@radix-ui/themes";
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
 import { SubmitCommandDialog } from "./SubmitCommandDialog";
+import { SettingsDialog } from "./SettingsDialog";
 
 const menu = [
   {
@@ -23,6 +24,7 @@ const menu = [
 export function Header() {
   const account = useCurrentAccount();
   const [submitCommandOpen, setSubmitCommandOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   
   return (
     <Container>
@@ -61,6 +63,15 @@ export function Header() {
         </Box>
 
         <Box className="flex gap-3 items-center">
+          <IconButton
+            variant="soft"
+            color="gray"
+            onClick={() => setSettingsOpen(true)}
+            title="Settings"
+          >
+            <GearIcon width={18} height={18} />
+          </IconButton>
+
           {account && (
             <Button
               variant="solid"
@@ -74,6 +85,11 @@ export function Header() {
           <ConnectButton />
         </Box>
       </Flex>
+
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      />
 
       <SubmitCommandDialog
         open={submitCommandOpen}

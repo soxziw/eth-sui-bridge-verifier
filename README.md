@@ -529,45 +529,19 @@ async function createSubmitCommandTransaction(
 
 > Make sure you have enough Testnet (or any net) SUI in the active address of the CLI.
 
-There are some helper functions to:
-
-1. Publish the smart contract
-2. Create some demo state roots
-
 To produce demo data:
 
-1. Publish the smart contract by running
+1. Run API server and indexer (This will automatically publish smart contracts and update package id and object id in api/proof-verifier-contract.json)
 
 ```bash
 # Under api/
-npx ts-node helpers/publish-contracts.ts
+pnpm demo
 ```
 
-2. Deploy state root registry service
-
-```bash
-# Under api/
-npx ts-node helpers/register-state-roots.ts
-```
-
-2. Produce demo state roots
-
-```bash
-# Under api/
-npx ts-node helpers/create-demo-data.ts
-```
-
-3. Run API server and indexer
-
-```bash
-# Under api/
-pnpm dev
-```
-
-4. Run Frontend
+2. Run Frontend
 ```bash
 # Under frontend/proof-verifier-dapp/
-pnpm dev
+pnpm demo
 ```
 
 If you want to reset the database (start from scratch), run:
@@ -576,55 +550,6 @@ If you want to reset the database (start from scratch), run:
 # Under api/
 pnpm db:reset:dev && pnpm db:setup:dev
 ```
-
-### Smart Contracts
-
-```bash
-cd contracts/proof-verifier
-sui move build
-sui client publish --gas-budget 500000000
-```
-
-Save the deployed package ID and object IDs for:
-- `StateRootOracle`
-- `ConditionTxOracle`
-- `MPTProofVerifier`
-- `AdminCap` (for state root submissions)
-
-### API & Indexer
-
-```bash
-cd api
-pnpm install
-
-# Setup database
-pnpm db:setup:dev
-
-# Run API server and indexer
-pnpm dev
-```
-
-Update `api/config.ts` with deployed contract addresses.
-
-### Frontend
-
-```bash
-cd frontend/proof-verifier-dapp
-pnpm install
-
-# Development
-pnpm dev
-
-# Production build
-pnpm build
-```
-
-Update `src/constants.ts` with:
-- Deployed package ID
-- Object IDs for oracles
-- API endpoint URL
-- Alchemy API key
-
 ---
 
 ## Security Considerations
